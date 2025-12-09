@@ -328,13 +328,13 @@ def dashboard_view():
         fig.update_traces(fill='toself', line_color='#f63366')
         fig.update_layout(
             polar=dict(
-                radialaxis=dict(visible=True, range=[0, max(max(stats.values()) + 10, 20)])
+                radialaxis=dict(visible=True, range=[0, max(max(stats.values()) + 10, 20)], showticklabels=False)
             ),
-            margin=dict(l=20, r=20, t=20, b=20),
-            height=300,
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=180,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font_color="white"
+            font_color="white",
         )
         st.plotly_chart(fig, use_container_width=True)
 
