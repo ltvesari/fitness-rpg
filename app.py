@@ -9,7 +9,37 @@ import os
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
 
-# ... (CSS stuff)
+# Custom CSS for "Premium" look & Mobile Optimization
+st.markdown("""
+<style>
+    /* Mobile Optimization: Reduce wrapper padding */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Hide Streamlit Branding */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Existing Premium Styles */
+    .stProgress > div > div > div > div {
+        background-color: #f63366;
+    }
+    .big-font {
+        font-size:30px !important;
+        font-weight: bold;
+    }
+    .metric-card {
+        background-color: #262730;
+        border-radius: 10px;
+        padding: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Session State Initialization
 if 'current_user' not in st.session_state:
