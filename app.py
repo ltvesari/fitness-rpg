@@ -498,12 +498,12 @@ def dashboard_view():
                     act_type = "Strength"
                 elif "AGI" in w_type:
                     stat_reward["AGI"] = 20
-                        stat_reward["WIS"] = 5
-                        act_type = "Cardio"
-                    elif "WIS" in w_type:
-                        stat_reward["WIS"] = 20
-                        stat_reward["VIT"] = 5
-                        act_type = "Mobility"
+                    stat_reward["WIS"] = 5
+                    act_type = "Cardio"
+                elif "WIS" in w_type:
+                    stat_reward["WIS"] = 20
+                    stat_reward["VIT"] = 5
+                    act_type = "Mobility"
                         
                     # Save Image
                     image_path = None
@@ -588,7 +588,7 @@ def dashboard_view():
         selected_boss = st.radio("Zorluk Seç", list(boss_options.keys()))
         boss_data = boss_options[selected_boss]
         
-        st.markdown(f\"\"\"
+        st.markdown(f"""
         ### 📜 {selected_boss.split(':')[1]}
         **Görev:** {boss_data['desc']}
         
@@ -596,7 +596,7 @@ def dashboard_view():
         - 🌟 **{boss_data['xp']} XP**
         - 💪 **+{boss_data['stats']['STR']} STR**
         - ❤️ **+{boss_data['stats']['VIT']} VIT**
-        \"\"\")
+        """)
         
         with st.form("boss_form"):
             boss_desc = st.text_input("Zafer Notu", f"{boss_data['target_kg']}kg başardım!")
