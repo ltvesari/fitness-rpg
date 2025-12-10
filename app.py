@@ -5,10 +5,8 @@ from models import Character, GameSystem
 import extra_streamlit_components as stx
 from datetime import datetime, timedelta
 import os
-
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
-
 # Custom CSS for "Premium" look & Mobile Optimization
 st.markdown("""
 <style>
@@ -40,13 +38,9 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
 # Session State Initialization
 if 'current_user' not in st.session_state:
     st.session_state.current_user = None
-
-
-
 # --- Helper Functions ---
 def load_user(name, password):
     chars = GameSystem.load_characters()
@@ -57,18 +51,14 @@ def load_user(name, password):
             return True, "Giriş Başarılı"
         return False, "Hatalı Şifre"
     return False, "Kullanıcı Bulunamadı"
-
 def create_user(name, char_class, password, avatar_id):
     new_char = Character(name, char_class, password, avatar_id)
     GameSystem.save_character(new_char)
     st.session_state.current_user = new_char
-
 def save_current_user():
     if st.session_state.current_user:
         GameSystem.save_character(st.session_state.current_user)
-
 # --- Views ---
-
 def admin_dashboard_view():
     st.title("👨‍🏫 Öğretmen Kontrol Paneli")
     
@@ -80,7 +70,6 @@ def admin_dashboard_view():
     if not chars:
         st.warning("Henüz hiç öğrenci kaydı yok.")
         return
-
     # Sidebar: Manuel Hediye Dağıt
     with st.sidebar:
         st.header("🎁 Hediye Dağıt")
@@ -97,7 +86,6 @@ def admin_dashboard_view():
             GameSystem.save_character(target_char)
             st.success(f"{selected_student} kişisine {gift_xp_amount} XP gönderildi!")
             st.rerun()
-
     # Data Preparation
     data = []
     for char in chars.values():
@@ -113,19 +101,15 @@ def admin_dashboard_view():
             "Son Aktivite": char.history[-1]['date'][:16] if char.history else "Yok"
         })
     df = pd.DataFrame(data)
-
     # Top Metrics
     m1, m2, m3 = st.columns(3)
     m1.metric("Toplam Öğrenci", len(df))
     m2.metric("Ortalama Seviye", f"{df['Seviye'].mean():.1f}")
     m3.metric("En Popüler Sınıf", df['Sınıf'].mode()[0] if not df.empty else "-")
-
     # Main Table
     tab_list, tab_approve = st.tabs(["📊 Genel Durum", "📝 Onay Bekleyenler"])
-
     with tab_list:
         st.dataframe(df, use_container_width=True)
-
         # Charts
         c1, c2 = st.columns(2)
         with c1:
@@ -137,7 +121,6 @@ def admin_dashboard_view():
             st.subheader("Seviye Dağılımı")
             fig_lvl = px.bar(df, x='İsim', y='Seviye', color='Sınıf', title='Öğrenci Seviyeleri')
             st.plotly_chart(fig_lvl, use_container_width=True)
-
     with tab_approve:
         st.subheader("Onay Bekleyen Aktiviteler")
         pending_found = False
@@ -184,7 +167,6 @@ def admin_dashboard_view():
                                         GameSystem.save_character(char)
                                         st.success(f"Puanlandı! {grade_xp} XP verildi.")
                                         st.rerun()
-
                             else:
                                 # Standart Görevler İçin
                                 st.write(f"**Ödül:** {activity['xp_reward']} XP")
@@ -218,7 +200,6 @@ def admin_dashboard_view():
                                     st.rerun()
         if not pending_found:
             st.info("Bekleyen onay yok.")
-
 def onboarding_view():
     # Compact Header with Icon on top (Zoomed out for mobile view)
     st.markdown("""
@@ -228,7 +209,6 @@ def onboarding_view():
             <p style='font-size: 14px; color: gray; margin:0;'>Macerana başlamak için giriş yap veya katıl.</p>
         </div>
     """, unsafe_allow_html=True)
-
     # Wrap the rest of the content (columns) in a zoomed div equivalent
     # Streamlit columns cannot be easily wrapped in HTML, so we inject CSS to zoom form containers specifically for this view
     st.markdown("""
@@ -238,7 +218,6 @@ def onboarding_view():
             }
         </style>
     """, unsafe_allow_html=True)
-
     # Columns: Login (Left/Top) - Register (Right/Bottom)
     col_login, col_register = st.columns(2)
     
@@ -294,7 +273,6 @@ def onboarding_view():
                         st.rerun()
                 else:
                     st.error("Eksik bilgi.")
-
     # Admin Login at the very bottom
     st.write("")
     with st.expander("👨‍🏫 Öğretmen Girişi"):
@@ -305,8 +283,6 @@ def onboarding_view():
                 st.rerun()
             else:
                 st.error("Hatalı Şifre")
-
-
 def dashboard_view():
     char = st.session_state.current_user
     
@@ -330,10 +306,8 @@ def dashboard_view():
         if st.button("Çıkış Yap"):
             st.session_state.current_user = None
             st.rerun()
-
     # Main Content
     col_left, col_right = st.columns([1, 2])
-
     with col_left:
         st.markdown("### 📊 İstatistikler")
         
@@ -356,7 +330,6 @@ def dashboard_view():
             font_color="white",
         )
         st.plotly_chart(fig, use_container_width=True)
-
         st.divider()
         st.markdown("### 🏆 Başarılar")
         if char.level >= 5:
@@ -365,7 +338,6 @@ def dashboard_view():
             st.success("🎖️ Usta Rozeti")
         if char.level < 5:
             st.caption("Daha fazla rozet için seviye atla!")
-
     with col_right:
         st.markdown("### 📜 Görev Panosu")
         
@@ -404,7 +376,6 @@ def dashboard_view():
                             st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
                             st.balloons()
                             st.rerun()
-
             with col_daily2:
                 with st.container(border=True):
                     st.markdown("##### 🚶 Adım Görevleri")
@@ -438,7 +409,6 @@ def dashboard_view():
                                 st.rerun()
                             else:
                                 st.error("Lütfen fotoğraf yükle!")
-
         with tab5:
             st.subheader("✨ Extra Aktivite")
             st.info("Sınırları zorladın mı? Kendine özel bir başarı mı kazandın? Buradan paylaş, eğitmenin seni ödüllendirsin!")
@@ -464,7 +434,6 @@ def dashboard_view():
                         st.rerun()
                     else:
                         st.error("Lütfen açıklama yaz ve kanıt yükle.")
-
         with tab2:
             st.subheader("Antrenman Kaydı")
             st.info("Yaptığın antrenmanı gir ve güçlen!")
@@ -501,7 +470,6 @@ def dashboard_view():
                         image_path = os.path.join("uploads", proof_file.name)
                         with open(image_path, "wb") as f:
                             f.write(proof_file.getbuffer())
-
                     char.log_activity(act_type, desc, base_xp, stat_reward, proof_image=image_path)
                     save_current_user()
                     
@@ -510,7 +478,6 @@ def dashboard_view():
                     else:
                         st.success(f"Aktivite kaydedildi! +{base_xp} XP") # Kanıtsızsa direkt onaylı (şimdilik)
                     st.rerun()
-
         with tab3:
             st.subheader("🍎 Sağlıklı Beslenme")
             st.info("Sağlıklı bir öğün tüket, **+150 XP** ve **+5 VIT** kazan!")
@@ -529,7 +496,6 @@ def dashboard_view():
                         image_path = os.path.join("uploads", meal_proof.name)
                         with open(image_path, "wb") as f:
                             f.write(meal_proof.getbuffer())
-
                         # Ödül: 150 XP, +5 VIT
                         char.log_activity("Nutrition", f"{meal_type}: {meal_desc}", 150, {"VIT": 5}, proof_image=image_path)
                         save_current_user()
@@ -538,7 +504,6 @@ def dashboard_view():
                         st.rerun()
                     else:
                         st.error("Lütfen öğünün fotoğrafını yükle!")
-
         with tab4:
             st.subheader("👹 Boss Savaşı: Titanların Yükselişi")
             st.info("Kilona göre kaderini seç! Haftalık en büyük meydan okuma.")
@@ -598,7 +563,6 @@ def dashboard_view():
                         image_path = os.path.join("uploads", boss_proof.name)
                         with open(image_path, "wb") as f:
                             f.write(boss_proof.getbuffer())
-
                         # Activity Log
                         activity_text = f"Boss Savaşı: {selected_boss} - {boss_desc}"
                         char.log_activity("BossFight", activity_text, boss_data['xp'], boss_data['stats'], proof_image=image_path)
@@ -609,7 +573,6 @@ def dashboard_view():
                         st.rerun()
                     else:
                         st.error("Boss savaşı için kanıt yüklemek zorunludur! Hile yok savaşçı!")
-
     # History Log
     with st.expander("📝 Maceran Günlüğü (Son 5 Aktivite)"):
         if char.history:
@@ -624,9 +587,7 @@ def dashboard_view():
                 st.text(f"{status_icon} {h['date'][:16]} - {h['description']} ({xp_text})")
         else:
             st.caption("Henüz bir kayıt yok.")
-
 # --- Main App Logic ---
-
 if st.session_state.current_user == "ADMIN":
     admin_dashboard_view()
 elif st.session_state.current_user:
