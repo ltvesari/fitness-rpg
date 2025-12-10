@@ -443,71 +443,70 @@ def dashboard_view():
     
     with tab1:
         st.subheader("Günlük Görevler")
-        col_daily1, col_daily2 = st.columns(2)
+        
+        # Vertical Layout: Water First
+        with st.container(border=True):
+            st.markdown("##### 💧 Su Tüketimi")
+            st.caption("Su hayattır! Hedefini seç.")
             
-        with col_daily1:
-            with st.container(border=True):
-                st.markdown("##### 💧 Su Tüketimi")
-                st.caption("Su hayattır! Hedefini seç.")
-                
-                water_tiers = {
-                    "250ml - Başlangıç Yudumu": {"xp": 5, "vit": 1},
-                    "500ml - Sabah İksiri": {"xp": 10, "vit": 2},
-                    "750ml - Doğa Pınarı": {"xp": 15, "vit": 3},
-                    "1 LT - Su Matarası": {"xp": 25, "vit": 5},
-                    "2 LT - Nehir Ruhu": {"xp": 50, "vit": 10},
-                    "3 LT - Okyanus Efendisi": {"xp": 100, "vit": 20},
-                }
-                
-                w_selection = st.selectbox("Miktar Seç", list(water_tiers.keys()))
-                w_data = water_tiers[w_selection]
-                st.info(f"🎁 **Ödül:** {w_data['xp']} XP, +{w_data['vit']} VIT")
-                
-                with st.form("water_form"):
-                    # Su için fotoğraf istemiyoruz
-                    if st.form_submit_button("İçtim!"):
-                        # Dynamic Description inside log
-                        desc_text = f"Su Tüketimi: {w_selection}"
-                        # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
-                        char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
-                        save_current_user()
-                        st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
-                        st.balloons()
-                        st.rerun()
+            water_tiers = {
+                "250ml - Başlangıç Yudumu": {"xp": 5, "vit": 1},
+                "500ml - Sabah İksiri": {"xp": 10, "vit": 2},
+                "750ml - Doğa Pınarı": {"xp": 15, "vit": 3},
+                "1 LT - Su Matarası": {"xp": 25, "vit": 5},
+                "2 LT - Nehir Ruhu": {"xp": 50, "vit": 10},
+                "3 LT - Okyanus Efendisi": {"xp": 100, "vit": 20},
+            }
+            
+            w_selection = st.selectbox("Miktar Seç", list(water_tiers.keys()))
+            w_data = water_tiers[w_selection]
+            st.info(f"🎁 **Ödül:** {w_data['xp']} XP, +{w_data['vit']} VIT")
+            
+            with st.form("water_form"):
+                # Su için fotoğraf istemiyoruz
+                if st.form_submit_button("İçtim!"):
+                    # Dynamic Description inside log
+                    desc_text = f"Su Tüketimi: {w_selection}"
+                    # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
+                    char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
+                    save_current_user()
+                    st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
+                    st.balloons()
+                    st.rerun()
 
-            with col_daily2:
-                with st.container(border=True):
-                    st.markdown("##### 🚶 Adım Görevleri")
-                    st.caption("Yürümek keşfetmektir!")
-                    
-                    walk_tiers = {
-                        "7k Adım - Devriye Gezintisi": {"xp": 30, "agi": 5},
-                        "10k Adım - Hazine Avı": {"xp": 50, "agi": 10},
-                        "15k Adım - Efsanevi Yolculuk": {"xp": 100, "agi": 15},
-                    }
-                    
-                    walk_selection = st.selectbox("Hedef Seç", list(walk_tiers.keys()))
-                    walk_data = walk_tiers[walk_selection]
-                    st.info(f"🎁 **Ödül:** {walk_data['xp']} XP, +{walk_data['agi']} AGI")
-                    
-                    with st.form("walk_form"):
-                        walk_proof = st.file_uploader("Adım Sayar", type=["jpg", "png"], key="walk_proof")
+        # Vertical Layout: Steps Second
+        with st.container(border=True):
+            st.markdown("##### 🚶 Adım Görevleri")
+            st.caption("Yürümek keşfetmektir!")
+            
+            walk_tiers = {
+                "7k Adım - Devriye Gezintisi": {"xp": 30, "agi": 5},
+                "10k Adım - Hazine Avı": {"xp": 50, "agi": 10},
+                "15k Adım - Efsanevi Yolculuk": {"xp": 100, "agi": 15},
+            }
+            
+            walk_selection = st.selectbox("Hedef Seç", list(walk_tiers.keys()))
+            walk_data = walk_tiers[walk_selection]
+            st.info(f"🎁 **Ödül:** {walk_data['xp']} XP, +{walk_data['agi']} AGI")
+            
+            with st.form("walk_form"):
+                walk_proof = st.file_uploader("Adım Sayar", type=["jpg", "png"], key="walk_proof")
+                
+                if st.form_submit_button("Tamamladım"):
+                    if walk_proof:
+                        if not os.path.exists("uploads"):
+                            os.makedirs("uploads")
+                        img_path = os.path.join("uploads", walk_proof.name)
+                        with open(img_path, "wb") as f:
+                            f.write(walk_proof.getbuffer())
                         
-                        if st.form_submit_button("Tamamladım"):
-                            if walk_proof:
-                                if not os.path.exists("uploads"):
-                                    os.makedirs("uploads")
-                                img_path = os.path.join("uploads", walk_proof.name)
-                                with open(img_path, "wb") as f:
-                                    f.write(walk_proof.getbuffer())
-                                
-                                desc_text = f"Yürüyüş: {walk_selection}"
-                                char.log_activity("Cardio", desc_text, walk_data['xp'], {"AGI": walk_data['agi']}, proof_image=img_path)
-                                save_current_user()
-                                st.info("Onaya gönderildi! ⏳")
-                                st.rerun()
-                            else:
-                                st.error("Lütfen fotoğraf yükle!")
+                        desc_text = f"Yürüyüş: {walk_selection}"
+                        char.log_activity("Cardio", desc_text, walk_data['xp'], {"AGI": walk_data['agi']}, proof_image=img_path)
+                        save_current_user()
+                        st.info("Onaya gönderildi! ⏳")
+                        st.rerun()
+                    else:
+                        st.error("Lütfen fotoğraf yükle!")
 
     with tab5:
         st.subheader("✨ Extra Aktivite")
