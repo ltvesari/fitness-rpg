@@ -5,8 +5,10 @@ from models import Character, GameSystem
 import extra_streamlit_components as stx
 from datetime import datetime, timedelta
 import os
+
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
+
 # Custom CSS for "Premium" look & Mobile Optimization
 st.markdown("""
 <style>
@@ -38,9 +40,13 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 # Session State Initialization
 if 'current_user' not in st.session_state:
     st.session_state.current_user = None
+
+
+
 # --- Helper Functions ---
 def load_user(name, password):
     chars = GameSystem.load_characters()
@@ -51,14 +57,18 @@ def load_user(name, password):
             return True, "Giriş Başarılı"
         return False, "Hatalı Şifre"
     return False, "Kullanıcı Bulunamadı"
+
 def create_user(name, char_class, password, avatar_id):
     new_char = Character(name, char_class, password, avatar_id)
     GameSystem.save_character(new_char)
     st.session_state.current_user = new_char
+
 def save_current_user():
     if st.session_state.current_user:
         GameSystem.save_character(st.session_state.current_user)
+
 # --- Views ---
+
 def admin_dashboard_view():
     st.title("👨‍🏫 Öğretmen Kontrol Paneli")
     
@@ -70,6 +80,7 @@ def admin_dashboard_view():
     if not chars:
         st.warning("Henüz hiç öğrenci kaydı yok.")
         return
+
     # Sidebar: Manuel Hediye Dağıt
     with st.sidebar:
         st.header("🎁 Hediye Dağıt")
@@ -86,6 +97,7 @@ def admin_dashboard_view():
             GameSystem.save_character(target_char)
             st.success(f"{selected_student} kişisine {gift_xp_amount} XP gönderildi!")
             st.rerun()
+
     # Data Preparation
     data = []
     for char in chars.values():
@@ -101,15 +113,19 @@ def admin_dashboard_view():
             "Son Aktivite": char.history[-1]['date'][:16] if char.history else "Yok"
         })
     df = pd.DataFrame(data)
+
     # Top Metrics
     m1, m2, m3 = st.columns(3)
     m1.metric("Toplam Öğrenci", len(df))
     m2.metric("Ortalama Seviye", f"{df['Seviye'].mean():.1f}")
     m3.metric("En Popüler Sınıf", df['Sınıf'].mode()[0] if not df.empty else "-")
+
     # Main Table
     tab_list, tab_approve = st.tabs(["📊 Genel Durum", "📝 Onay Bekleyenler"])
+
     with tab_list:
         st.dataframe(df, use_container_width=True)
+
         # Charts
         c1, c2 = st.columns(2)
         with c1:
@@ -121,6 +137,7 @@ def admin_dashboard_view():
             st.subheader("Seviye Dağılımı")
             fig_lvl = px.bar(df, x='İsim', y='Seviye', color='Sınıf', title='Öğrenci Seviyeleri')
             st.plotly_chart(fig_lvl, use_container_width=True)
+
     with tab_approve:
         st.subheader("Onay Bekleyen Aktiviteler")
         pending_found = False
@@ -167,6 +184,7 @@ def admin_dashboard_view():
                                         GameSystem.save_character(char)
                                         st.success(f"Puanlandı! {grade_xp} XP verildi.")
                                         st.rerun()
+
                             else:
                                 # Standart Görevler İçin
                                 st.write(f"**Ödül:** {activity['xp_reward']} XP")
@@ -200,6 +218,7 @@ def admin_dashboard_view():
                                     st.rerun()
         if not pending_found:
             st.info("Bekleyen onay yok.")
+
 def onboarding_view():
     # Compact Header with Icon on top (Zoomed out for mobile view)
     st.markdown("""
@@ -209,6 +228,7 @@ def onboarding_view():
             <p style='font-size: 14px; color: gray; margin:0;'>Macerana başlamak için giriş yap veya katıl.</p>
         </div>
     """, unsafe_allow_html=True)
+
     # Wrap the rest of the content (columns) in a zoomed div equivalent
     # Streamlit columns cannot be easily wrapped in HTML, so we inject CSS to zoom form containers specifically for this view
     st.markdown("""
@@ -218,6 +238,7 @@ def onboarding_view():
             }
         </style>
     """, unsafe_allow_html=True)
+
     # Columns: Login (Left/Top) - Register (Right/Bottom)
     col_login, col_register = st.columns(2)
     
@@ -273,6 +294,7 @@ def onboarding_view():
                         st.rerun()
                 else:
                     st.error("Eksik bilgi.")
+
     # Admin Login at the very bottom
     st.write("")
     with st.expander("👨‍🏫 Öğretmen Girişi"):
@@ -283,99 +305,118 @@ def onboarding_view():
                 st.rerun()
             else:
                 st.error("Hatalı Şifre")
+
+
 def dashboard_view():
     char = st.session_state.current_user
     
-    # Header
-    c1, c2, c3 = st.columns([1, 4, 1])
-    with c1:
-        # Avatar Görseli (Dinamik)
+    # Global Dashboard CSS for compact spacing
+    st.markdown("""
+        <style>
+            /* Headers */
+            h1, h2, h3 { margin: 0px !important; padding: 0px !important; }
+            /* Vertical gaps */
+            .stColumn { padding-top: 0px !important; }
+            div[data-testid="column"] { gap: 0.5rem; }
+        </style>
+        <div style='zoom: 0.85;'> <!-- Global Dashboard Zoom -->
+    """, unsafe_allow_html=True)
+    
+    # --- Compact Header Row (Avatar | Info | Chart) ---
+    c_avatar, c_info, c_chart = st.columns([1, 1.5, 1.5], gap="small")
+    
+    with c_avatar:
+        # Avatar (Small)
         avatar_path = char.get_avatar_image()
-        if os.path.exists(avatar_path):
-            st.image(avatar_path, width=150)
-        else:
-            # Fallback
-            st.image("https://api.dicebear.com/7.x/adventurer/svg?seed=" + char.name, width=100)
-    with c2:
-        st.title(f"{char.name} - Lvl {char.level} {char.char_class}")
-        # XP Bar
+        img_src = avatar_path if os.path.exists(avatar_path) else f"https://api.dicebear.com/7.x/adventurer/svg?seed={char.name}"
+        st.image(img_src, width=80)
+        if st.button("🚪 Çıkış", key="logout_btn", use_container_width=True):
+             st.session_state.current_user = None
+             st.rerun()
+
+    with c_info:
+        # Name & Level (Compact)
+        st.markdown(f"<h4 style='margin:0;'>{char.name}</h4>", unsafe_allow_html=True)
+        st.caption(f"Lvl {char.level} {char.char_class}")
+        
+        # XP Bar (Thinner)
         xp_needed = char.level * 1000
         progress = min(char.xp / xp_needed, 1.0)
-        st.progress(progress, text=f"XP: {char.xp} / {xp_needed}")
-    with c3:
-        if st.button("Çıkış Yap"):
-            st.session_state.current_user = None
-            st.rerun()
-    # Main Content
-    col_left, col_right = st.columns([1, 2])
-    with col_left:
-        st.markdown("### 📊 İstatistikler")
+        st.progress(progress, text=f"{char.xp}/{xp_needed} XP")
         
-        # Radar Chart
+        # Badges (Tiny)
+        badges = []
+        if char.level >= 5: badges.append("🎖️")
+        if char.level >= 10: badges.append("🥇")
+        if badges:
+            st.write(" ".join(badges))
+
+    with c_chart:
+        # Micro Radar Chart
         stats = char.stats
-        df = pd.DataFrame(dict(
-            r=list(stats.values()),
-            theta=list(stats.keys())
-        ))
+        df = pd.DataFrame(dict(r=list(stats.values()), theta=list(stats.keys())))
         fig = px.line_polar(df, r='r', theta='theta', line_close=True)
         fig.update_traces(fill='toself', line_color='#f63366')
         fig.update_layout(
             polar=dict(
-                radialaxis=dict(visible=True, range=[0, max(max(stats.values()) + 10, 20)], showticklabels=False)
+                radialaxis=dict(visible=False, range=[0, max(max(stats.values()) + 10, 20)]) # Axis hidden
             ),
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=180,
+            margin=dict(l=5, r=5, t=5, b=5),
+            height=120, # Ultra compact
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font_color="white",
+            showlegend=False
         )
-        st.plotly_chart(fig, use_container_width=True)
-        st.divider()
-        st.markdown("### 🏆 Başarılar")
-        if char.level >= 5:
-            st.success("🎖️ Çırak Rozeti")
-        if char.level >= 10:
-            st.success("🎖️ Usta Rozeti")
-        if char.level < 5:
-            st.caption("Daha fazla rozet için seviye atla!")
-    with col_right:
-        st.markdown("### 📜 Görev Panosu")
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    st.markdown("</div>", unsafe_allow_html=True) # Close zoom div (but logical flow continues)
+    
+    # --- Task Board (Full Width Below) ---
+    # We continue inside the zoom scope effectively by layout proximity, 
+    # but strictly speaking the div closed above. 
+    # Let's wrap the TABS in a zoomed container too or just rely on CSS.
+    # Actually, let's keep the tabs normal width but compact content.
+    
+    # Main Content is just the tabs now, no columns split needed for Stats vs Tasks
+    st.markdown("<div style='zoom: 0.9;'>", unsafe_allow_html=True)
+    # Tabs...
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Günlük", "Antrenman", "Beslenme", "Boss Savaşı", "✨ Extra"])
-        
-        with tab1:
-            st.subheader("Günlük Görevler")
-            col_daily1, col_daily2 = st.columns(2)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Günlük", "Antrenman", "Beslenme", "Boss Savaşı", "✨ Extra"])
+    
+    with tab1:
+        st.subheader("Günlük Görevler")
+        col_daily1, col_daily2 = st.columns(2)
             
-            with col_daily1:
-                with st.container(border=True):
-                    st.markdown("##### 💧 Su Tüketimi")
-                    st.caption("Su hayattır! Hedefini seç.")
-                    
-                    water_tiers = {
-                        "250ml - Başlangıç Yudumu": {"xp": 5, "vit": 1},
-                        "500ml - Sabah İksiri": {"xp": 10, "vit": 2},
-                        "750ml - Doğa Pınarı": {"xp": 15, "vit": 3},
-                        "1 LT - Su Matarası": {"xp": 25, "vit": 5},
-                        "2 LT - Nehir Ruhu": {"xp": 50, "vit": 10},
-                        "3 LT - Okyanus Efendisi": {"xp": 100, "vit": 20},
-                    }
-                    
-                    w_selection = st.selectbox("Miktar Seç", list(water_tiers.keys()))
-                    w_data = water_tiers[w_selection]
-                    st.info(f"🎁 **Ödül:** {w_data['xp']} XP, +{w_data['vit']} VIT")
-                    
-                    with st.form("water_form"):
-                        # Su için fotoğraf istemiyoruz
-                        if st.form_submit_button("İçtim!"):
-                            # Dynamic Description inside log
-                            desc_text = f"Su Tüketimi: {w_selection}"
-                            # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
-                            char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
-                            save_current_user()
-                            st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
-                            st.balloons()
-                            st.rerun()
+        with col_daily1:
+            with st.container(border=True):
+                st.markdown("##### 💧 Su Tüketimi")
+                st.caption("Su hayattır! Hedefini seç.")
+                
+                water_tiers = {
+                    "250ml - Başlangıç Yudumu": {"xp": 5, "vit": 1},
+                    "500ml - Sabah İksiri": {"xp": 10, "vit": 2},
+                    "750ml - Doğa Pınarı": {"xp": 15, "vit": 3},
+                    "1 LT - Su Matarası": {"xp": 25, "vit": 5},
+                    "2 LT - Nehir Ruhu": {"xp": 50, "vit": 10},
+                    "3 LT - Okyanus Efendisi": {"xp": 100, "vit": 20},
+                }
+                
+                w_selection = st.selectbox("Miktar Seç", list(water_tiers.keys()))
+                w_data = water_tiers[w_selection]
+                st.info(f"🎁 **Ödül:** {w_data['xp']} XP, +{w_data['vit']} VIT")
+                
+                with st.form("water_form"):
+                    # Su için fotoğraf istemiyoruz
+                    if st.form_submit_button("İçtim!"):
+                        # Dynamic Description inside log
+                        desc_text = f"Su Tüketimi: {w_selection}"
+                        # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
+                        char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
+                        save_current_user()
+                        st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
+                        st.balloons()
+                        st.rerun()
+
             with col_daily2:
                 with st.container(border=True):
                     st.markdown("##### 🚶 Adım Görevleri")
@@ -409,52 +450,54 @@ def dashboard_view():
                                 st.rerun()
                             else:
                                 st.error("Lütfen fotoğraf yükle!")
-        with tab5:
-            st.subheader("✨ Extra Aktivite")
-            st.info("Sınırları zorladın mı? Kendine özel bir başarı mı kazandın? Buradan paylaş, eğitmenin seni ödüllendirsin!")
+
+    with tab5:
+        st.subheader("✨ Extra Aktivite")
+        st.info("Sınırları zorladın mı? Kendine özel bir başarı mı kazandın? Buradan paylaş, eğitmenin seni ödüllendirsin!")
+        
+        with st.form("extra_form"):
+            extra_desc = st.text_area("Ne yaptın?", "Örn: 30 gün boyunca her sabah 5'te kalktım. / Yeni bir jonglörlük numarası öğrendim.")
+            extra_proof = st.file_uploader("Kanıt Fotoğrafı/Videosu", type=["png", "jpg", "jpeg", "mp4"])
             
-            with st.form("extra_form"):
-                extra_desc = st.text_area("Ne yaptın?", "Örn: 30 gün boyunca her sabah 5'te kalktım. / Yeni bir jonglörlük numarası öğrendim.")
-                extra_proof = st.file_uploader("Kanıt Fotoğrafı/Videosu", type=["png", "jpg", "jpeg", "mp4"])
-                
-                submitted = st.form_submit_button("Gönder")
-                if submitted:
-                    if extra_desc and extra_proof:
-                        if not os.path.exists("uploads"):
-                            os.makedirs("uploads")
-                        image_path = os.path.join("uploads", extra_proof.name)
-                        with open(image_path, "wb") as f:
-                            f.write(extra_proof.getbuffer())
-                            
-                        # XP ve Stat ödülleri 0 olarak gönderilir, hoca belirleyecek
-                        char.log_activity("Extra", extra_desc, 0, {}, proof_image=image_path)
-                        save_current_user()
-                        st.success("Harika! Eğitmenine gönderildi. Puanlamasını bekle. 🌟")
-                        st.balloons()
-                        st.rerun()
-                    else:
-                        st.error("Lütfen açıklama yaz ve kanıt yükle.")
-        with tab2:
-            st.subheader("Antrenman Kaydı")
-            st.info("Yaptığın antrenmanı gir ve güçlen!")
+            submitted = st.form_submit_button("Gönder")
+            if submitted:
+                if extra_desc and extra_proof:
+                    if not os.path.exists("uploads"):
+                        os.makedirs("uploads")
+                    image_path = os.path.join("uploads", extra_proof.name)
+                    with open(image_path, "wb") as f:
+                        f.write(extra_proof.getbuffer())
+                        
+                    # XP ve Stat ödülleri 0 olarak gönderilir, hoca belirleyecek
+                    char.log_activity("Extra", extra_desc, 0, {}, proof_image=image_path)
+                    save_current_user()
+                    st.success("Harika! Eğitmenine gönderildi. Puanlamasını bekle. 🌟")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error("Lütfen açıklama yaz ve kanıt yükle.")
+
+    with tab2:
+        st.subheader("Antrenman Kaydı")
+        st.info("Yaptığın antrenmanı gir ve güçlen!")
+        
+        with st.form("workout_form"):
+            w_type = st.selectbox("Tip", ["Ağırlık (STR)", "Kardiyo (AGI)", "Yoga/Esneme (WIS)", "HIIT (AGI)"])
+            duration = st.number_input("Süre (Dakika)", min_value=10, value=45)
+            desc = st.text_input("Açıklama", "Örn: Bacak günü, 5km koşu...")
+            proof_file = st.file_uploader("Kanıt Fotoğrafı Yükle", type=["png", "jpg", "jpeg"])
             
-            with st.form("workout_form"):
-                w_type = st.selectbox("Tip", ["Ağırlık (STR)", "Kardiyo (AGI)", "Yoga/Esneme (WIS)", "HIIT (AGI)"])
-                duration = st.number_input("Süre (Dakika)", min_value=10, value=45)
-                desc = st.text_input("Açıklama", "Örn: Bacak günü, 5km koşu...")
-                proof_file = st.file_uploader("Kanıt Fotoğrafı Yükle", type=["png", "jpg", "jpeg"])
+            submitted = st.form_submit_button("Kaydet")
+            if submitted:
+                base_xp = duration * 2 # Basit formül
+                stat_reward = {}
                 
-                submitted = st.form_submit_button("Kaydet")
-                if submitted:
-                    base_xp = duration * 2 # Basit formül
-                    stat_reward = {}
-                    
-                    if "STR" in w_type:
-                        stat_reward["STR"] = 20
-                        stat_reward["WIS"] = 5
-                        act_type = "Strength"
-                    elif "AGI" in w_type:
-                        stat_reward["AGI"] = 20
+                if "STR" in w_type:
+                    stat_reward["STR"] = 20
+                    stat_reward["WIS"] = 5
+                    act_type = "Strength"
+                elif "AGI" in w_type:
+                    stat_reward["AGI"] = 20
                         stat_reward["WIS"] = 5
                         act_type = "Cardio"
                     elif "WIS" in w_type:
@@ -470,6 +513,7 @@ def dashboard_view():
                         image_path = os.path.join("uploads", proof_file.name)
                         with open(image_path, "wb") as f:
                             f.write(proof_file.getbuffer())
+
                     char.log_activity(act_type, desc, base_xp, stat_reward, proof_image=image_path)
                     save_current_user()
                     
@@ -478,101 +522,106 @@ def dashboard_view():
                     else:
                         st.success(f"Aktivite kaydedildi! +{base_xp} XP") # Kanıtsızsa direkt onaylı (şimdilik)
                     st.rerun()
-        with tab3:
-            st.subheader("🍎 Sağlıklı Beslenme")
-            st.info("Sağlıklı bir öğün tüket, **+150 XP** ve **+5 VIT** kazan!")
+
+    with tab3:
+        st.subheader("🍎 Sağlıklı Beslenme")
+        st.info("Sağlıklı bir öğün tüket, **+150 XP** ve **+5 VIT** kazan!")
+        
+        with st.form("nutrition_form"):
+            meal_type = st.selectbox("Öğün", ["Kahvaltı", "Öğle Yemeği", "Akşam Yemeği", "Ara Öğün"])
+            meal_desc = st.text_input("Menü", "Örn: Izgara Tavuk ve Salata")
+            meal_proof = st.file_uploader("Öğün Fotoğrafı", type=["png", "jpg", "jpeg"])
             
-            with st.form("nutrition_form"):
-                meal_type = st.selectbox("Öğün", ["Kahvaltı", "Öğle Yemeği", "Akşam Yemeği", "Ara Öğün"])
-                meal_desc = st.text_input("Menü", "Örn: Izgara Tavuk ve Salata")
-                meal_proof = st.file_uploader("Öğün Fotoğrafı", type=["png", "jpg", "jpeg"])
-                
-                meal_submit = st.form_submit_button("Afiyet Olsun")
-                
-                if meal_submit:
-                    if meal_proof:
-                        if not os.path.exists("uploads"):
-                            os.makedirs("uploads")
-                        image_path = os.path.join("uploads", meal_proof.name)
-                        with open(image_path, "wb") as f:
-                            f.write(meal_proof.getbuffer())
-                        # Ödül: 150 XP, +5 VIT
-                        char.log_activity("Nutrition", f"{meal_type}: {meal_desc}", 150, {"VIT": 5}, proof_image=image_path)
-                        save_current_user()
-                        st.info("Öğün onaya gönderildi! +5 VIT, +150 XP (Onaylanınca)")
-                        st.balloons()
-                        st.rerun()
-                    else:
-                        st.error("Lütfen öğünün fotoğrafını yükle!")
-        with tab4:
-            st.subheader("👹 Boss Savaşı: Titanların Yükselişi")
-            st.info("Kilona göre kaderini seç! Haftalık en büyük meydan okuma.")
+            meal_submit = st.form_submit_button("Afiyet Olsun")
             
-            # Kilo Girişi
-            user_weight = st.number_input("Vücut Ağırlığı (kg)", min_value=40, value=70, step=1)
-            
-            # Hedef Hesaplama
-            t1_target = int(user_weight * 0.5)
-            t2_target = int(user_weight * 1.0)
-            t3_target = int(user_weight * 1.5)
-            
-            # Boss Seçenekleri
-            boss_options = {
-                "Seviye 1: Demir Çırak (0.5x)": {
-                    "desc": f"Hedef: {t1_target}kg ile Bench/Squat/Deadlift/LatPull",
-                    "xp": 500, 
-                    "stats": {"STR": 5, "VIT": 5},
-                    "target_kg": t1_target
-                },
-                "Seviye 2: Çelik Muhafız (1.0x)": {
-                    "desc": f"Hedef: {user_weight}kg ile Bench/Squat/Deadlift/LatPull",
-                    "xp": 1500, 
-                    "stats": {"STR": 15, "VIT": 10},
-                    "target_kg": user_weight
-                },
-                "Seviye 3: Titanyum Titan (1.5x)": {
-                    "desc": f"Hedef: {t3_target}kg ile Bench/Squat/Deadlift/LatPull",
-                    "xp": 3000, 
-                    "stats": {"STR": 30, "VIT": 20},
-                    "target_kg": t3_target
-                }
+            if meal_submit:
+                if meal_proof:
+                    if not os.path.exists("uploads"):
+                        os.makedirs("uploads")
+                    image_path = os.path.join("uploads", meal_proof.name)
+                    with open(image_path, "wb") as f:
+                        f.write(meal_proof.getbuffer())
+
+                    # Ödül: 150 XP, +5 VIT
+                    char.log_activity("Nutrition", f"{meal_type}: {meal_desc}", 150, {"VIT": 5}, proof_image=image_path)
+                    save_current_user()
+                    st.info("Öğün onaya gönderildi! +5 VIT, +150 XP (Onaylanınca)")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error("Lütfen öğünün fotoğrafını yükle!")
+
+    with tab4:
+        st.subheader("👹 Boss Savaşı: Titanların Yükselişi")
+        st.info("Kilona göre kaderini seç! Haftalık en büyük meydan okuma.")
+        
+        # Kilo Girişi
+        user_weight = st.number_input("Vücut Ağırlığı (kg)", min_value=40, value=70, step=1)
+        
+        # Hedef Hesaplama
+        t1_target = int(user_weight * 0.5)
+        t2_target = int(user_weight * 1.0)
+        t3_target = int(user_weight * 1.5)
+        
+        # Boss Seçenekleri
+        boss_options = {
+            "Seviye 1: Demir Çırak (0.5x)": {
+                "desc": f"Hedef: {t1_target}kg ile Bench/Squat/Deadlift/LatPull",
+                "xp": 500, 
+                "stats": {"STR": 5, "VIT": 5},
+                "target_kg": t1_target
+            },
+            "Seviye 2: Çelik Muhafız (1.0x)": {
+                "desc": f"Hedef: {user_weight}kg ile Bench/Squat/Deadlift/LatPull",
+                "xp": 1500, 
+                "stats": {"STR": 15, "VIT": 10},
+                "target_kg": user_weight
+            },
+            "Seviye 3: Titanyum Titan (1.5x)": {
+                "desc": f"Hedef: {t3_target}kg ile Bench/Squat/Deadlift/LatPull",
+                "xp": 3000, 
+                "stats": {"STR": 30, "VIT": 20},
+                "target_kg": t3_target
             }
+        }
+        
+        selected_boss = st.radio("Zorluk Seç", list(boss_options.keys()))
+        boss_data = boss_options[selected_boss]
+        
+        st.markdown(f\"\"\"
+        ### 📜 {selected_boss.split(':')[1]}
+        **Görev:** {boss_data['desc']}
+        
+        **Ödüller:**
+        - 🌟 **{boss_data['xp']} XP**
+        - 💪 **+{boss_data['stats']['STR']} STR**
+        - ❤️ **+{boss_data['stats']['VIT']} VIT**
+        \"\"\")
+        
+        with st.form("boss_form"):
+            boss_desc = st.text_input("Zafer Notu", f"{boss_data['target_kg']}kg başardım!")
+            boss_proof = st.file_uploader("Kanıt (Video/Fotoğraf)", type=["png", "jpg", "jpeg", "mp4"])
+            boss_submit = st.form_submit_button("⚔️ Saldırıya Başla")
             
-            selected_boss = st.radio("Zorluk Seç", list(boss_options.keys()))
-            boss_data = boss_options[selected_boss]
-            
-            st.markdown(f"""
-            ### 📜 {selected_boss.split(':')[1]}
-            **Görev:** {boss_data['desc']}
-            
-            **Ödüller:**
-            - 🌟 **{boss_data['xp']} XP**
-            - 💪 **+{boss_data['stats']['STR']} STR**
-            - ❤️ **+{boss_data['stats']['VIT']} VIT**
-            """)
-            
-            with st.form("boss_form"):
-                boss_desc = st.text_input("Zafer Notu", f"{boss_data['target_kg']}kg başardım!")
-                boss_proof = st.file_uploader("Kanıt (Video/Fotoğraf)", type=["png", "jpg", "jpeg", "mp4"])
-                boss_submit = st.form_submit_button("⚔️ Saldırıya Başla")
-                
-                if boss_submit:
-                    if boss_proof:
-                        if not os.path.exists("uploads"):
-                            os.makedirs("uploads")
-                        image_path = os.path.join("uploads", boss_proof.name)
-                        with open(image_path, "wb") as f:
-                            f.write(boss_proof.getbuffer())
-                        # Activity Log
-                        activity_text = f"Boss Savaşı: {selected_boss} - {boss_desc}"
-                        char.log_activity("BossFight", activity_text, boss_data['xp'], boss_data['stats'], proof_image=image_path)
-                        save_current_user()
-                        
-                        st.success(f"Saldırı başarılı! Ödül onaya gönderildi. ({boss_data['xp']} XP)")
-                        st.balloons()
-                        st.rerun()
-                    else:
-                        st.error("Boss savaşı için kanıt yüklemek zorunludur! Hile yok savaşçı!")
+            if boss_submit:
+                if boss_proof:
+                    if not os.path.exists("uploads"):
+                        os.makedirs("uploads")
+                    image_path = os.path.join("uploads", boss_proof.name)
+                    with open(image_path, "wb") as f:
+                        f.write(boss_proof.getbuffer())
+
+                    # Activity Log
+                    activity_text = f"Boss Savaşı: {selected_boss} - {boss_desc}"
+                    char.log_activity("BossFight", activity_text, boss_data['xp'], boss_data['stats'], proof_image=image_path)
+                    save_current_user()
+                    
+                    st.success(f"Saldırı başarılı! Ödül onaya gönderildi. ({boss_data['xp']} XP)")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error("Boss savaşı için kanıt yüklemek zorunludur! Hile yok savaşçı!")
+
     # History Log
     with st.expander("📝 Maceran Günlüğü (Son 5 Aktivite)"):
         if char.history:
@@ -587,7 +636,9 @@ def dashboard_view():
                 st.text(f"{status_icon} {h['date'][:16]} - {h['description']} ({xp_text})")
         else:
             st.caption("Henüz bir kayıt yok.")
+
 # --- Main App Logic ---
+
 if st.session_state.current_user == "ADMIN":
     admin_dashboard_view()
 elif st.session_state.current_user:
