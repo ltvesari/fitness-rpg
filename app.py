@@ -9,6 +9,10 @@ import os
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
 
+# Initialize Cookie Manager
+cookie_manager = stx.CookieManager()
+
+
 # Custom CSS for "Premium" look & Mobile Optimization
 st.markdown("""
 <style>
@@ -252,6 +256,8 @@ def onboarding_view():
             if login_submitted:
                 success, msg = load_user(existing_name, existing_password)
                 if success:
+                    # Set Cookie for 30 days
+                    cookie_manager.set("fitness_rpg_user", existing_name, expires_at=datetime.now() + timedelta(days=30))
                     st.success(msg)
                     st.rerun()
                 else:
@@ -423,6 +429,7 @@ def dashboard_view():
     # Hidden logical logout check
     query_params = st.query_params
     if "logout" in query_params:
+        cookie_manager.delete("fitness_rpg_user")
         st.session_state.current_user = None
         st.query_params.clear()
         st.rerun()
@@ -695,6 +702,21 @@ def dashboard_view():
             st.caption("Henüz bir kayıt yok.")
 
 # --- Main App Logic ---
+
+# Auto-login Check
+if not st.session_state.current_user:
+    # Try to get cookie
+    c_user = cookie_manager.get(cookie="fitness_rpg_user")
+    if c_user:
+        # Load characters to verify
+        chars = GameSystem.load_characters()
+        if c_user in chars:
+            # Valid user in cookie, auto-login
+            loaded_char = GameSystem.get_character(c_user)
+            st.session_state.current_user = loaded_char
+            # No rerun needed here ideally, it will fall through to dashboard_view
+            # But let's rerun to be safe and clean url/state
+            st.rerun()
 
 if st.session_state.current_user == "ADMIN":
     admin_dashboard_view()
