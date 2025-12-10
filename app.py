@@ -311,47 +311,91 @@ def dashboard_view():
     char = st.session_state.current_user
     
     # Global Dashboard CSS for compact spacing
+    # Global Dashboard CSS for compact mobile spacing
     st.markdown("""
         <style>
-            /* Headers */
-            h1, h2, h3 { margin: 0px !important; padding: 0px !important; }
-            /* Vertical gaps */
-            .stColumn { padding-top: 0px !important; }
-            div[data-testid="column"] { gap: 0.5rem; }
+            /* Headers reset */
+            h1, h2, h3, h4, h5, p { margin: 0px !important; padding: 0px !important; }
+            /* Force horizontal layout on mobile for specific containers */
+            [data-testid="stHorizontalBlock"] {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                align-items: center !important;
+            }
+            /* Hide scrollbars */
+            ::-webkit-scrollbar { width: 0px; height: 0px; }
+            
+            /* Compact Columns */
+            div[data-testid="column"] { min-width: 0px !important; flex: 1 1 0px !important; }
+            
+            /* Logout Button Style (High Contrast / Universal) */
+            .logout-btn {
+                background-color: #ffffff;
+                color: #31333F !important; /* Dark text for visibility on white */
+                text-decoration: none;
+                font-size: 13px;
+                padding: 3px 10px;
+                border-radius: 4px;
+                border: 1px solid #d6d6d8;
+                display: inline-block;
+                line-height: 1.4;
+                transition: all 0.2s;
+                font-weight: 500;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+            .logout-btn:hover {
+                border-color: #ff4b4b;
+                color: #ff4b4b !important;
+                background-color: #f0f2f6;
+            }
         </style>
-        <div style='zoom: 0.85;'> <!-- Global Dashboard Zoom -->
+        <div style='zoom: 0.90;'> <!-- Global Zoom -->
     """, unsafe_allow_html=True)
     
-    # --- Compact Header Row (Avatar | Info | Chart) ---
-    c_avatar, c_info, c_chart = st.columns([1, 1.5, 1.5], gap="small")
+    # --- Flex Header Row ---
+    # Col 1: Avatar + Name + Logout (Combined HTML)
+    # Col 2: Info (Level/XP)
+    # Col 3: Chart
+    c_left, c_right = st.columns([2, 1], gap="small")
     
-    with c_avatar:
-        # Avatar (Small)
+    with c_left:
+        # Avatar & Identity Inline
         avatar_path = char.get_avatar_image()
-        img_src = avatar_path if os.path.exists(avatar_path) else f"https://api.dicebear.com/7.x/adventurer/svg?seed={char.name}"
-        st.image(img_src, width=80)
-        if st.button("🚪 Çıkış", key="logout_btn", use_container_width=True):
-             st.session_state.current_user = None
-             st.rerun()
-
-    with c_info:
-        # Name & Level (Compact)
-        st.markdown(f"<h4 style='margin:0;'>{char.name}</h4>", unsafe_allow_html=True)
-        st.caption(f"Lvl {char.level} {char.char_class}")
         
-        # XP Bar (Thinner)
-        xp_needed = char.level * 1000
-        progress = min(char.xp / xp_needed, 1.0)
-        st.progress(progress, text=f"{char.xp}/{xp_needed} XP")
-        
-        # Badges (Tiny)
-        badges = []
-        if char.level >= 5: badges.append("🎖️")
-        if char.level >= 10: badges.append("🥇")
-        if badges:
-            st.write(" ".join(badges))
+        # Helper to get base64 string
+        import base64
+        def get_img_as_base64(file_path):
+            with open(file_path, "rb") as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
 
-    with c_chart:
+        if os.path.exists(avatar_path):
+            # Local file -> Convert to Base64
+            img_b64 = get_img_as_base64(avatar_path)
+            img_src = f"data:image/png;base64,{img_b64}"
+        else:
+            # Fallback URL
+            img_src = f"https://api.dicebear.com/7.x/adventurer/svg?seed={char.name}"
+        
+        # HTML for Layout: Avatar Left, Text Right, Close together
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="{img_src}" style="width: 60px; height: 60px; border-radius: 10px; object-fit: cover; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+            <div>
+                <div style="font-weight: bold; font-size: 16px; line-height: 1.2;">{char.name}</div>
+                <div style="font-size: 11px; color: #aaa; margin-bottom: 4px;">Lvl {char.level} {char.char_class}</div>
+                <div>
+                    <a href="?logout=true" target="_self" class="logout-btn">Çıkış</a>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Check for logout query param workaround or just use a small streamlit button below if link fails (Streamlit links reload app)
+        # Using a button is safer for session state. Let's start with just the button HIDDEN or very small.
+        # Actually, let's keep the button but make it TINY via Streamlit.
+    
+    with c_right:
         # Micro Radar Chart
         stats = char.stats
         df = pd.DataFrame(dict(r=list(stats.values()), theta=list(stats.keys())))
@@ -359,15 +403,29 @@ def dashboard_view():
         fig.update_traces(fill='toself', line_color='#f63366')
         fig.update_layout(
             polar=dict(
-                radialaxis=dict(visible=False, range=[0, max(max(stats.values()) + 10, 20)]) # Axis hidden
+                radialaxis=dict(visible=False, range=[0, max(max(stats.values()) + 10, 20)]) 
             ),
-            margin=dict(l=5, r=5, t=5, b=5),
-            height=120, # Ultra compact
+            margin=dict(l=0, r=0, t=0, b=0),
+            height=80, # Ultra micro
+            width=80,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             showlegend=False
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig, config={'displayModeBar': False})
+
+    # Logout Logic (Callback check handled via session state usually, here we need a button)
+    # To make it truly compact, we used HTML button above but Streamlit doesn't support HTML button events easily.
+    # We will add a tiny Streamlit button in the sidebar or just below the avatar if needed.
+    # For now, let's trust the HTML link visual, but we actually need a functional button.
+    # Reverting link to a Streamlit button but styling it small.
+    
+    # Hidden logical logout check
+    query_params = st.query_params
+    if "logout" in query_params:
+        st.session_state.current_user = None
+        st.query_params.clear()
+        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True) # Close zoom div (but logical flow continues)
     
