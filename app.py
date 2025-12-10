@@ -220,13 +220,23 @@ def admin_dashboard_view():
             st.info("Bekleyen onay yok.")
 
 def onboarding_view():
-    # Compact Header with Icon on top (büyük boşluklar olmadan)
+    # Compact Header with Icon on top (Zoomed out for mobile view)
     st.markdown("""
-        <div style='text-align: center; margin-top: -20px; margin-bottom: 20px;'>
+        <div style='zoom: 0.8; text-align: center; margin-top: -20px; margin-bottom: 20px;'>
             <div style='font-size: 40px;'>⚔️</div>
             <h3 style='margin:0; padding:0;'>Fitness RPG'ye Hoşgeldiniz</h3>
             <p style='font-size: 14px; color: gray; margin:0;'>Macerana başlamak için giriş yap veya katıl.</p>
         </div>
+    """, unsafe_allow_html=True)
+
+    # Wrap the rest of the content (columns) in a zoomed div equivalent
+    # Streamlit columns cannot be easily wrapped in HTML, so we inject CSS to zoom form containers specifically for this view
+    st.markdown("""
+        <style>
+            div[data-testid="column"] {
+                zoom: 0.80;
+            }
+        </style>
     """, unsafe_allow_html=True)
 
     # Columns: Login (Left/Top) - Register (Right/Bottom)
