@@ -220,64 +220,24 @@ def admin_dashboard_view():
             st.info("Bekleyen onay yok.")
 
 def onboarding_view():
-    st.title("⚔️ Fitness RPG'ye Hoşgeldiniz")
-    st.write("Macerana başlamak için karakterini oluştur.")
-    
-    # Admin Login Toggle
-    with st.expander("👨‍🏫 Öğretmen Girişi"):
-        admin_pass = st.text_input("Yönetici Şifresi", type="password")
-        if st.button("Yönetici Giriş"):
-            if admin_pass == "admin123":
-                st.session_state.current_user = "ADMIN"
-                st.rerun()
-            else:
-                st.error("Hatalı Şifre")
+    # Compact Header with Icon on top (büyük boşluklar olmadan)
+    st.markdown("""
+        <div style='text-align: center; margin-top: -20px; margin-bottom: 20px;'>
+            <div style='font-size: 40px;'>⚔️</div>
+            <h3 style='margin:0; padding:0;'>Fitness RPG'ye Hoşgeldiniz</h3>
+            <p style='font-size: 14px; color: gray; margin:0;'>Macerana başlamak için giriş yap veya katıl.</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+    # Columns: Login (Left/Top) - Register (Right/Bottom)
+    col_login, col_register = st.columns(2)
     
-    with col1:
-        st.subheader("Yeni Karakter")
-        with st.form("new_char_form"):
-            name = st.text_input("Kahraman Adı")
-            password = st.text_input("Şifre Belirle", type="password")
-            char_class = st.selectbox("Sınıf Seç", ["Savaşçı", "Korucu", "Keşiş"])
-            gender = st.radio("Cinsiyet", ["Erkek", "Kadın"], horizontal=True)
-            
-            submitted = st.form_submit_button("Maceraya Başla")
-            if submitted:
-                if name and password:
-                    chars = GameSystem.load_characters()
-                    if name in chars:
-                        st.warning("Bu isimde bir kahraman zaten var!")
-                    else:
-                        # Avatar ID oluşturma mantığı: sinif_cinsiyet (örn: warrior_male)
-                        class_map = {"Savaşçı": "warrior", "Korucu": "ranger", "Keşiş": "monk"}
-                        gender_map = {"Erkek": "male", "Kadın": "female"}
-                        
-                        slug_class = class_map.get(char_class, "warrior")
-                        slug_gender = gender_map.get(gender, "male")
-                        
-                        final_avatar_id = f"{slug_class}_{slug_gender}"
-                        
-                        create_user(name, char_class, password, final_avatar_id)
-                        st.rerun()
-                else:
-                    st.error("Lütfen isim ve şifre girin.")
-        
-        # Class Descriptions
-        if char_class == "Savaşçı":
-            st.info("**Savaşçı (Warrior)**: Güç ve Hipertrofi odaklı. Ağırlık antrenmanlarından bonus kazanır.")
-        elif char_class == "Korucu (Ranger)":
-            st.info("**Korucu (Ranger)**: Hibrit atlet. Dayanıklılık ve esneklik görevlerinden bonus alır.")
-        elif char_class == "Keşiş (Monk)":
-            st.info("**Keşiş (Monk)**: Mobilite ve zihin odaklı. Süreklilik bonusları yüksektir.")
-
-    with col2:
-        st.subheader("Giriş Yap")
+    with col_login:
+        st.markdown("##### 🔓 Giriş Yap")
         with st.form("login_form"):
-            existing_name = st.text_input("Kahraman Adı")
-            existing_password = st.text_input("Şifre", type="password")
-            login_submitted = st.form_submit_button("Devam Et")
+            existing_name = st.text_input("Kahraman Adı", placeholder="Adınız")
+            existing_password = st.text_input("Şifre", type="password", placeholder="****")
+            login_submitted = st.form_submit_button("Giriş", use_container_width=True)
             
             if login_submitted:
                 success, msg = load_user(existing_name, existing_password)
@@ -286,6 +246,55 @@ def onboarding_view():
                     st.rerun()
                 else:
                     st.error(msg)
+    
+    with col_register:
+        st.markdown("##### 🛡️ Maceraya Katıl")
+        with st.form("new_char_form"):
+            name = st.text_input("Kahraman Adı", placeholder="Yeni İsim")
+            password = st.text_input("Şifre Belirle", type="password", placeholder="****")
+            
+            # Compact Class Selection
+            c1, c2 = st.columns(2)
+            with c1:
+                char_class = st.selectbox("Sınıf", ["Savaşçı", "Korucu", "Keşiş"], label_visibility="collapsed")
+            with c2:
+                gender = st.radio("Cinsiyet", ["Erkek", "Kadın"], horizontal=True, label_visibility="collapsed")
+            
+            # Class info (Very compact)
+            if char_class == "Savaşçı":
+                st.caption("⚔️ Güç ve Hipertrofi")
+            elif char_class == "Korucu":
+                st.caption("🏹 Dayanıklılık ve Esneklik")
+            elif char_class == "Keşiş":
+                st.caption("🧘 Mobilite ve Zihin")
+                
+            submitted = st.form_submit_button("Başla", use_container_width=True)
+            if submitted:
+                if name and password:
+                    chars = GameSystem.load_characters()
+                    if name in chars:
+                        st.warning("Bu isim zaten alındı!")
+                    else:
+                        class_map = {"Savaşçı": "warrior", "Korucu": "ranger", "Keşiş": "monk"}
+                        gender_map = {"Erkek": "male", "Kadın": "female"}
+                        slug_class = class_map.get(char_class, "warrior")
+                        slug_gender = gender_map.get(gender, "male")
+                        final_avatar_id = f"{slug_class}_{slug_gender}"
+                        create_user(name, char_class, password, final_avatar_id)
+                        st.rerun()
+                else:
+                    st.error("Eksik bilgi.")
+
+    # Admin Login at the very bottom
+    st.write("")
+    with st.expander("👨‍🏫 Öğretmen Girişi"):
+        admin_pass = st.text_input("Yönetici Şifresi", type="password")
+        if st.button("Yönetici Giriş"):
+            if admin_pass == "admin123":
+                st.session_state.current_user = "ADMIN"
+                st.rerun()
+            else:
+                st.error("Hatalı Şifre")
 
 
 def dashboard_view():
@@ -392,9 +401,9 @@ def dashboard_view():
                     st.caption("Yürümek keşfetmektir!")
                     
                     walk_tiers = {
-                        "7k Adım - Devriye Gezintisi": {"xp": 30, "agi": 2},
-                        "10k Adım - Hazine Avı": {"xp": 50, "agi": 3},
-                        "15k Adım - Efsanevi Yolculuk": {"xp": 100, "agi": 5},
+                        "7k Adım - Devriye Gezintisi": {"xp": 30, "agi": 5},
+                        "10k Adım - Hazine Avı": {"xp": 50, "agi": 10},
+                        "15k Adım - Efsanevi Yolculuk": {"xp": 100, "agi": 15},
                     }
                     
                     walk_selection = st.selectbox("Hedef Seç", list(walk_tiers.keys()))
@@ -462,13 +471,16 @@ def dashboard_view():
                     stat_reward = {}
                     
                     if "STR" in w_type:
-                        stat_reward["STR"] = 5
+                        stat_reward["STR"] = 20
+                        stat_reward["WIS"] = 5
                         act_type = "Strength"
                     elif "AGI" in w_type:
-                        stat_reward["AGI"] = 3
+                        stat_reward["AGI"] = 20
+                        stat_reward["WIS"] = 5
                         act_type = "Cardio"
                     elif "WIS" in w_type:
-                        stat_reward["WIS"] = 5
+                        stat_reward["WIS"] = 20
+                        stat_reward["VIT"] = 5
                         act_type = "Mobility"
                         
                     # Save Image
