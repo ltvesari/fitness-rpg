@@ -2,16 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from models import Character, GameSystem
-import extra_streamlit_components as stx
 from datetime import datetime, timedelta
 import os
-import time
+import base64
 
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
 
-# Initialize Cookie Manager
-cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
 
 # Custom CSS for "Premium" look & Mobile Optimization
@@ -257,14 +254,8 @@ def onboarding_view():
             if login_submitted:
                 success, msg = load_user(existing_name, existing_password)
                 if success:
-                    # Set Cookie for 30 days
-                    cookie_manager.set("fitness_rpg_user", existing_name, expires_at=datetime.now() + timedelta(days=30))
-                    
-                    # Do NOT rerun immediately. Let the component sync.
-                    # Set session state so UI updates
                     st.session_state.current_user = GameSystem.load_characters().get(existing_name)
-                    st.success(f"{msg} - Yönlendiriliyorsunuz... (Lütfen bekleyin)")
-                    time.sleep(1) # Give frontend time to process cookie
+                    st.success(f"{msg} - Hoşgeldin!")
                     st.rerun()
                 else:
                     st.error(msg)
@@ -402,41 +393,10 @@ def dashboard_view():
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Check for logout query param workaround or just use a small streamlit button below if link fails (Streamlit links reload app)
-        # Using a button is safer for session state. Let's start with just the button HIDDEN or very small.
-        # Actually, let's keep the button but make it TINY via Streamlit.
-    
-    with c_right:
-        # Micro Radar Chart
-        stats = char.stats
-        df = pd.DataFrame(dict(r=list(stats.values()), theta=list(stats.keys())))
-        fig = px.line_polar(df, r='r', theta='theta', line_close=True)
-        fig.update_traces(fill='toself', line_color='#f63366')
-        fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=False, range=[0, max(max(stats.values()) + 10, 20)]) 
-            ),
-            margin=dict(l=0, r=0, t=0, b=0),
-            height=80, # Ultra micro
-            width=80,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            showlegend=False
-        )
-        st.plotly_chart(fig, config={'displayModeBar': False})
 
-    # Logout Logic (Callback check handled via session state usually, here we need a button)
-    # To make it truly compact, we used HTML button above but Streamlit doesn't support HTML button events easily.
-    # We will add a tiny Streamlit button in the sidebar or just below the avatar if needed.
-    # For now, let's trust the HTML link visual, but we actually need a functional button.
-    # Reverting link to a Streamlit button but styling it small.
-    
     # Hidden logical logout check
     query_params = st.query_params
     if "logout" in query_params:
-        cookie_manager.delete("fitness_rpg_user")
-        time.sleep(0.5) # Wait for deletion to sync
         st.session_state.current_user = None
         st.query_params.clear()
         st.rerun()
@@ -709,21 +669,6 @@ def dashboard_view():
             st.caption("Henüz bir kayıt yok.")
 
 # --- Main App Logic ---
-
-# Auto-login Check
-if not st.session_state.current_user:
-    # Try to get cookie
-    c_user = cookie_manager.get(cookie="fitness_rpg_user")
-    if c_user:
-        # Load characters to verify
-        chars = GameSystem.load_characters()
-        if c_user in chars:
-            # Valid user in cookie, auto-login
-            loaded_char = chars.get(c_user)
-            st.session_state.current_user = loaded_char
-            # No rerun needed here ideally, it will fall through to dashboard_view
-            # But let's rerun to be safe and clean url/state
-            st.rerun()
 
 if st.session_state.current_user == "ADMIN":
     admin_dashboard_view()
