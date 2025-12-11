@@ -5,6 +5,7 @@ from models import Character, GameSystem
 from datetime import datetime, timedelta
 import os
 import base64
+import time
 
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
@@ -144,7 +145,7 @@ def admin_dashboard_view():
         st.subheader("Onay Bekleyen Aktiviteler")
         pending_found = False
         for char_name, char in chars.items():
-            for activity in char.history:
+            for i, activity in enumerate(char.history):
                 if activity.get("status") == "pending":
                     pending_found = True
                     with st.expander(f"{char_name} - {activity['type']} ({activity['date'][:16]})"):
@@ -161,18 +162,18 @@ def admin_dashboard_view():
                             if activity['type'] == "Extra":
                                 st.markdown("### 🎓 Puanlama")
                                 c_xp, c_str, c_agi = st.columns(3)
-                                grade_xp = c_xp.number_input("XP Ödülü", min_value=0, value=100, step=50, key=f"xp_{activity['id']}")
-                                grade_str = c_str.number_input("STR", min_value=0, value=0, key=f"str_{activity['id']}")
-                                grade_agi = c_agi.number_input("AGI", min_value=0, value=0, key=f"agi_{activity['id']}")
+                                grade_xp = c_xp.number_input("XP Ödülü", min_value=0, value=100, step=50, key=f"xp_{activity['id']}_{i}")
+                                grade_str = c_str.number_input("STR", min_value=0, value=0, key=f"str_{activity['id']}_{i}")
+                                grade_agi = c_agi.number_input("AGI", min_value=0, value=0, key=f"agi_{activity['id']}_{i}")
                                 
                                 c_vit, c_wis, c_btn = st.columns(3)
-                                grade_vit = c_vit.number_input("VIT", min_value=0, value=0, key=f"vit_{activity['id']}")
-                                grade_wis = c_wis.number_input("WIS", min_value=0, value=0, key=f"wis_{activity['id']}")
+                                grade_vit = c_vit.number_input("VIT", min_value=0, value=0, key=f"vit_{activity['id']}_{i}")
+                                grade_wis = c_wis.number_input("WIS", min_value=0, value=0, key=f"wis_{activity['id']}_{i}")
                                 
                                 with c_btn:
                                     st.write("") # Spacer
                                     st.write("")
-                                    if st.button("🌟 Puanla ve Onayla", key=f"grade_{activity['id']}"):
+                                    if st.button("🌟 Puanla ve Onayla", key=f"grade_{activity['id']}_{i}"):
                                         # Değerleri güncelle
                                         activity['xp_reward'] = grade_xp
                                         activity['stat_rewards'] = {
@@ -193,13 +194,13 @@ def admin_dashboard_view():
                                 
                                 b1, b2 = st.columns(2)
                                 with b1:
-                                    if st.button("✅ Onayla", key=f"app_{activity['id']}"):
+                                    if st.button("✅ Onayla", key=f"app_{activity['id']}_{i}"):
                                         char.approve_activity(activity['id'])
                                         GameSystem.save_character(char)
                                         st.success("Onaylandı!")
                                         st.rerun()
                                 with b2:
-                                    if st.button("❌ Reddet", key=f"rej_{activity['id']}"):
+                                    if st.button("❌ Reddet", key=f"rej_{activity['id']}_{i}"):
                                         char.reject_activity(activity['id'])
                                         GameSystem.save_character(char)
                                         st.error("Reddedildi.")
@@ -207,10 +208,10 @@ def admin_dashboard_view():
                             
                             # Teselli / Hediye Bölümü
                             with st.expander("🎁 Teselli / Hediye Gönder"):
-                                gift_msg = st.text_input("Mesaj", "Çaban yeterli! Bir dahakine yaparsın.", key=f"msg_{activity['id']}")
-                                gift_xp = st.number_input("Hediye XP", min_value=1, value=25, key=f"xp_{activity['id']}")
+                                gift_msg = st.text_input("Mesaj", "Çaban yeterli! Bir dahakine yaparsın.", key=f"msg_{activity['id']}_{i}")
+                                gift_xp = st.number_input("Hediye XP", min_value=1, value=25, key=f"xp_gift_{activity['id']}_{i}")
                                 
-                                if st.button("Reddet & Hediye Gönder", key=f"gift_{activity['id']}"):
+                                if st.button("Reddet & Hediye Gönder", key=f"gift_{activity['id']}_{i}"):
                                     # 1. Orijinal aktiviteyi reddet
                                     char.reject_activity(activity['id'])
                                     # 2. Hediye aktivitesi ekle (Otomatik onaylı)
@@ -444,8 +445,11 @@ def dashboard_view():
                     # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
                     char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
                     save_current_user()
+                    # Toast Notification
+                    st.toast(f"Yarasın! {w_selection} içildi. 💧", icon="✅")
                     st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
-                    st.balloons()
+                    # st.balloons() # Balonlar her su içişte fazla olabilir, toast yeterli.
+                    time.sleep(1) # Toast görünsün diye kısa bekleme
                     st.rerun()
 
         # Vertical Layout: Steps Second
@@ -477,7 +481,9 @@ def dashboard_view():
                         desc_text = f"Yürüyüş: {walk_selection}"
                         char.log_activity("Cardio", desc_text, walk_data['xp'], {"AGI": walk_data['agi']}, proof_image=img_path)
                         save_current_user()
+                        st.toast("Adımlar sisteme işlendi! 👣", icon="✅")
                         st.info("Onaya gönderildi! ⏳")
+                        time.sleep(1) # Toast için bekleme
                         st.rerun()
                     else:
                         st.error("Lütfen fotoğraf yükle!")
@@ -502,8 +508,10 @@ def dashboard_view():
                     # XP ve Stat ödülleri 0 olarak gönderilir, hoca belirleyecek
                     char.log_activity("Extra", extra_desc, 0, {}, proof_image=image_path)
                     save_current_user()
+                    st.toast("Efsanevi hareket! Ekstra aktivite gönderildi. ✨", icon="🌟")
                     st.success("Harika! Eğitmenine gönderildi. Puanlamasını bekle. 🌟")
                     st.balloons()
+                    time.sleep(1.5) # Balonlar için biraz daha uzun pay
                     st.rerun()
                 else:
                     st.error("Lütfen açıklama yaz ve kanıt yükle.")
@@ -549,9 +557,12 @@ def dashboard_view():
                     save_current_user()
                     
                     if proof_file:
+                        st.toast("Antrenman onaya gönderildi! 💪", icon="⏳")
                         st.info("Aktivite onaya gönderildi! ⏳")
                     else:
+                        st.toast(f"Antrenman kaydedildi! +{base_xp} XP 🔥", icon="✅")
                         st.success(f"Aktivite kaydedildi! +{base_xp} XP") # Kanıtsızsa direkt onaylı (şimdilik)
+                    time.sleep(1)
                     st.rerun()
 
     with tab3:
@@ -576,8 +587,10 @@ def dashboard_view():
                     # Ödül: 150 XP, +5 VIT
                     char.log_activity("Nutrition", f"{meal_type}: {meal_desc}", 150, {"VIT": 5}, proof_image=image_path)
                     save_current_user()
+                    st.toast("Afiyet olsun! Öğün kaydedildi. 🥗", icon="🍽️")
                     st.info("Öğün onaya gönderildi! +5 VIT, +150 XP (Onaylanınca)")
-                    st.balloons()
+                    # st.balloons() # Sadece çok özel durumlarda
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("Lütfen öğünün fotoğrafını yükle!")
@@ -647,8 +660,10 @@ def dashboard_view():
                     char.log_activity("BossFight", activity_text, boss_data['xp'], boss_data['stats'], proof_image=image_path)
                     save_current_user()
                     
+                    st.toast("Kaderin mühürlendi! Boss Savaşı kaydı alındı. 👹", icon="⚔️")
                     st.success(f"Saldırı başarılı! Ödül onaya gönderildi. ({boss_data['xp']} XP)")
                     st.balloons()
+                    time.sleep(1.5)
                     st.rerun()
                 else:
                     st.error("Boss savaşı için kanıt yüklemek zorunludur! Hile yok savaşçı!")
