@@ -27,6 +27,87 @@ class Character:
 
     def get_avatar_image(self):
         """Seviyeye göre avatar görselini döndürür."""
+        
+        # --- ÖZEL DURUM: Kadın Savaşçı (Yeni 1-15 Seti) ---
+        if self.char_class == "Savaşçı" and self.avatar_id == "warrior_female":
+            lvl_index = min(self.level, 15)
+            lvl_index = max(1, lvl_index)
+            
+            path = f"assets/characters/warrior_female/level_{lvl_index}.png"
+            if os.path.exists(path):
+                return path
+            # Fallback
+            fallback = "assets/characters/warrior_female/level_1.png"
+            if os.path.exists(fallback):
+                return fallback
+
+        # --- ÖZEL DURUM: Erkek Savaşçı (Yeni 1-15 Seti) ---
+        # Sadece Savaşçı sınıfı ve varsayılan avatar_id 'warrior_male' (veya boş) ise
+        if self.char_class == "Savaşçı" and (self.avatar_id == "warrior_male" or not self.avatar_id):
+            # Level 15'e kadar (max 15. görsel var)
+            lvl_index = min(self.level, 15)
+            # Level 1'den küçük olamaz
+            lvl_index = max(1, lvl_index)
+            
+            path = f"assets/characters/warrior_male/level_{lvl_index}.png"
+            if os.path.exists(path):
+                return path
+            # Fallback
+            fallback = "assets/characters/warrior_male/level_1.png"
+            if os.path.exists(fallback):
+                return fallback
+
+        # --- ÖZEL DURUM: Kadın Korucu (Yeni 1-15 Seti) ---
+        if self.char_class == "Korucu" and self.avatar_id == "ranger_female":
+            lvl_index = min(self.level, 15)
+            lvl_index = max(1, lvl_index)
+            
+            path = f"assets/characters/ranger_female/level_{lvl_index}.png"
+            if os.path.exists(path):
+                return path
+            # Fallback
+            fallback = "assets/characters/ranger_female/level_1.png"
+            if os.path.exists(fallback):
+                return fallback
+
+        # --- ÖZEL DURUM: Erkek Korucu (Yeni 1-15 Seti) ---
+        if self.char_class == "Korucu" and (self.avatar_id == "ranger_male" or not self.avatar_id):
+            lvl_index = min(self.level, 15)
+            lvl_index = max(1, lvl_index)
+            
+            path = f"assets/characters/ranger_male/level_{lvl_index}.png"
+            if os.path.exists(path):
+                return path
+            # Fallback
+            fallback = "assets/characters/ranger_male/level_1.png"
+            if os.path.exists(fallback):
+                return fallback
+
+        # --- ÖZEL DURUM: Kadın Keşiş (Yeni 1-15 Seti) ---
+        if self.char_class == "Keşiş" and self.avatar_id == "monk_female":
+            lvl_index = min(self.level, 15)
+            lvl_index = max(1, lvl_index)
+            
+            path = f"assets/characters/monk_female/level_{lvl_index}.png"
+            if os.path.exists(path):
+                return path
+            # Fallback
+            fallback = "assets/characters/monk_female/level_1.png"
+            if os.path.exists(fallback):
+                return fallback
+
+        # --- ÖZEL DURUM: Erkek Keşiş (Yeni 1-15 Seti) ---
+        if self.char_class == "Keşiş" and (self.avatar_id == "monk_male" or not self.avatar_id):
+            lvl_index = min(self.level, 15)
+            lvl_index = max(1, lvl_index)
+            
+            path = f"assets/characters/monk_male/level_{lvl_index}.png"
+            if os.path.exists(path):
+                return path
+            # Fallback
+            fallback = "assets/characters/monk_male/level_1.png"
+            if os.path.exists(fallback):
+                return fallback
         # Determine tier based on level
         if self.level < 5:
             tier = "lvl1"
