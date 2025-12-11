@@ -5,12 +5,13 @@ from models import Character, GameSystem
 import extra_streamlit_components as stx
 from datetime import datetime, timedelta
 import os
+import time
 
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
 
 # Initialize Cookie Manager
-cookie_manager = stx.CookieManager()
+cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
 
 # Custom CSS for "Premium" look & Mobile Optimization
@@ -258,7 +259,12 @@ def onboarding_view():
                 if success:
                     # Set Cookie for 30 days
                     cookie_manager.set("fitness_rpg_user", existing_name, expires_at=datetime.now() + timedelta(days=30))
-                    st.success(msg)
+                    
+                    # Do NOT rerun immediately. Let the component sync.
+                    # Set session state so UI updates
+                    st.session_state.current_user = GameSystem.load_characters().get(existing_name)
+                    st.success(f"{msg} - Yönlendiriliyorsunuz... (Lütfen bekleyin)")
+                    time.sleep(1) # Give frontend time to process cookie
                     st.rerun()
                 else:
                     st.error(msg)
@@ -430,6 +436,7 @@ def dashboard_view():
     query_params = st.query_params
     if "logout" in query_params:
         cookie_manager.delete("fitness_rpg_user")
+        time.sleep(0.5) # Wait for deletion to sync
         st.session_state.current_user = None
         st.query_params.clear()
         st.rerun()
@@ -712,7 +719,7 @@ if not st.session_state.current_user:
         chars = GameSystem.load_characters()
         if c_user in chars:
             # Valid user in cookie, auto-login
-            loaded_char = GameSystem.get_character(c_user)
+            loaded_char = chars.get(c_user)
             st.session_state.current_user = loaded_char
             # No rerun needed here ideally, it will fall through to dashboard_view
             # But let's rerun to be safe and clean url/state
