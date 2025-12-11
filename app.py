@@ -357,12 +357,115 @@ def dashboard_view():
     """, unsafe_allow_html=True)
     
     # --- Flex Header Row ---
-    # Col 1: Avatar + Name + Logout (Combined HTML)
+    
+    # Helper functions
+    import base64
+    def get_img_as_base64(file_path):
+        with open(file_path, "rb") as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+        
+    avatar_path = char.get_avatar_image()
+    if os.path.exists(avatar_path):
+        img_b64 = get_img_as_base64(avatar_path)
+        img_src = f"data:image/png;base64,{img_b64}"
+    else:
+        img_src = f"https://api.dicebear.com/7.x/adventurer/svg?seed={char.name}"
+        
+    # Hesaplamalar
+    xp_next = char.level * 1000
+    xp_pct = min(100, int((char.xp / xp_next) * 100))
+    
+    # HTML Header
+    st.markdown(f"""
+<div style="
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    background: #fff; 
+    padding: 12px 16px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+    margin-bottom: 20px;
+    flex-wrap: wrap; 
+    gap: 15px;
+    border: 1px solid #f0f0f0;
+">
+    <!-- SOL: Avatar + İsim -->
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="position: relative;">
+            <img src="{img_src}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        </div>
+        <div style="line-height: 1.4;">
+            <div style="font-weight: 800; font-size: 22px; color: #1f2937; letter-spacing: -0.5px;">{char.name}</div>
+            <div style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                <span style="background:#eef2ff; color:#4f46e5; padding: 2px 8px; border-radius: 6px; font-weight:600;">Lvl {char.level}</span>
+                <span>{char.char_class}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAĞ: Çıkış Butonu -->
+    <div>
+        <a href="?logout=true" target="_self" class="logout-btn" style="
+            padding: 8px 18px; 
+            font-size: 14px; 
+            border: 1px solid #fee2e2; 
+            color: #dc2626 !important;
+            background: linear-gradient(to bottom, #fff, #fef2f2);
+            border-radius: 8px;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            white-space: nowrap;
+        ">Çıkış Güçtür 🚪</a>
+    </div>
+</div>
+
+<!-- XP Bar (Kırmızı - İstenilen Stil) -->
+<div style="margin-bottom: 25px; padding: 0 5px;">
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+        <span>XP İlerlemesi</span>
+        <span>{char.xp} / {xp_next} XP (%{xp_pct})</span>
+    </div>
+    <div style="width: 100%; height: 14px; background-color: #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
+        <div style="
+            width: {xp_pct}%; 
+            height: 100%; 
+            background: linear-gradient(90deg, #ef4444, #b91c1c); 
+            border-radius: 10px;
+            transition: width 0.6s ease-out;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        "></div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Radar Chart (Expander içine gizlendi - Temiz görünüm)
+    with st.expander("📊 Karakter İstatistikleri (Detay)", expanded=False):
+        df_stats = pd.DataFrame(dict(
+            r=list(char.stats.values()),
+            theta=list(char.stats.keys())
+        ))
+        fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True)
+        fig.update_traces(fill='toself', line_color='#ef4444')
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 30], showline=False, gridcolor="rgba(0,0,0,0.1)"),
+                bgcolor="rgba(0,0,0,0)"
+            ),
+            showlegend=False,
+            margin=dict(l=40, r=40, t=20, b=20),
+            height=320,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
     # Col 2: Info (Level/XP)
     # Col 3: Chart
-    c_left, c_right = st.columns([2, 1], gap="small")
-    
-    with c_left:
+    # HEADER REMOVED
+    if False: # Old header block start
+        if False: pass # with c_left:
         # Avatar & Identity Inline
         avatar_path = char.get_avatar_image()
         
