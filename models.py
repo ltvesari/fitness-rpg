@@ -86,8 +86,9 @@ class Character:
     def log_activity(self, activity_type, description, xp_reward, stat_rewards=None, proof_image=None):
         """Aktivite kaydeder."""
         
-        # ID oluştur (Basit timestamp tabanlı)
-        activity_id = f"{self.name}_{int(datetime.now().timestamp())}"
+        # ID oluştur (UUID tabanlı - Unique)
+        import uuid
+        activity_id = f"{self.name}_{str(uuid.uuid4())[:8]}"
 
         entry = {
             "id": activity_id,
