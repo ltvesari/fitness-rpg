@@ -374,20 +374,6 @@ def dashboard_view():
     
     # --- Flex Header Row ---
     
-    # Helper functions
-    import base64
-    def get_img_as_base64(file_path):
-        with open(file_path, "rb") as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
-        
-    avatar_path = char.get_avatar_image()
-    if os.path.exists(avatar_path):
-        img_b64 = get_img_as_base64(avatar_path)
-        img_src = f"data:image/png;base64,{img_b64}"
-    else:
-        img_src = f"https://api.dicebear.com/7.x/adventurer/svg?seed={char.name}"
-        
     # Hesaplamalar
     xp_next = char.level * 1000
     xp_pct = min(100, int((char.xp / xp_next) * 100))
@@ -395,11 +381,8 @@ def dashboard_view():
     # HTML Header
     st.markdown(f"""
 <div style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 12px 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; flex-wrap: wrap; gap: 15px; border: 1px solid #f0f0f0;">
-<!-- SOL: Avatar + İsim -->
+<!-- SOL: İsim ve Bilgi -->
 <div style="display: flex; align-items: center; gap: 15px;">
-<div style="position: relative;">
-<img src="{img_src}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-</div>
 <div style="line-height: 1.4;">
 <div style="font-weight: 800; font-size: 22px; color: #1f2937; letter-spacing: -0.5px;">{char.name}</div>
 <div style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 6px;">
