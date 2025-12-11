@@ -6,6 +6,22 @@ from datetime import datetime, timedelta
 import os
 import base64
 import time
+import random
+
+def get_rpg_loading_msg():
+    messages = [
+        "🎲 Zarlar Atılıyor...",
+        "⚔️ Kılıç Bileniyor...",
+        "📜 Parşömenler Okunuyor...",
+        "🧪 İksir Karıştırılıyor...",
+        "🐉 Ejderha Uykusundan Uyanıyor...",
+        "🧙‍♂️ Büyü Hazırlanıyor...",
+        "🛡️ Kalkan Parlatılıyor...",
+        "👣 İzler Sürülüyor...",
+        "👹 Boss Stratejisi Kuruluyor...",
+        "✨ Mana Toplanıyor..."
+    ]
+    return random.choice(messages)
 
 # Page Config
 st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
@@ -159,21 +175,33 @@ def admin_dashboard_view():
                             st.write(f"**Açıklama:** {activity['description']}")
                             
                             # Eğer Extra görev ise Puanlama Arayüzü Göster
-                            if activity['type'] == "Extra":
-                                st.markdown("### 🎓 Puanlama")
-                                c_xp, c_str, c_agi = st.columns(3)
-                                grade_xp = c_xp.number_input("XP Ödülü", min_value=0, value=100, step=50, key=f"xp_{activity['id']}_{i}")
-                                grade_str = c_str.number_input("STR", min_value=0, value=0, key=f"str_{activity['id']}_{i}")
-                                grade_agi = c_agi.number_input("AGI", min_value=0, value=0, key=f"agi_{activity['id']}_{i}")
-                                
-                                c_vit, c_wis, c_btn = st.columns(3)
-                                grade_vit = c_vit.number_input("VIT", min_value=0, value=0, key=f"vit_{activity['id']}_{i}")
-                                grade_wis = c_wis.number_input("WIS", min_value=0, value=0, key=f"wis_{activity['id']}_{i}")
-                                
-                                with c_btn:
-                                    st.write("") # Spacer
-                                    st.write("")
-                                    if st.button("🌟 Puanla ve Onayla", key=f"grade_{activity['id']}_{i}"):
+                            # Tüm Görevler İçin Puanlama Arayüzü (Esnek Ödül Sistemi)
+                            st.markdown("### 🎓 Puanlama & Onay")
+                            
+                            # Mevcut ödülleri varsayılan değer olarak al
+                            default_xp = int(activity.get('xp_reward', 0))
+                            stats = activity.get('stat_rewards', {})
+                            default_str = int(stats.get('STR', 0))
+                            default_agi = int(stats.get('AGI', 0))
+                            default_vit = int(stats.get('VIT', 0))
+                            default_wis = int(stats.get('WIS', 0))
+
+                            c_xp, c_str, c_agi = st.columns(3)
+                            grade_xp = c_xp.number_input("XP Ödülü", min_value=0, value=default_xp, step=5, key=f"xp_{activity['id']}_{i}")
+                            grade_str = c_str.number_input("STR", min_value=0, value=default_str, key=f"str_{activity['id']}_{i}")
+                            grade_agi = c_agi.number_input("AGI", min_value=0, value=default_agi, key=f"agi_{activity['id']}_{i}")
+                            
+                            c_vit, c_wis, c_btn = st.columns(3)
+                            grade_vit = c_vit.number_input("VIT", min_value=0, value=default_vit, key=f"vit_{activity['id']}_{i}")
+                            grade_wis = c_wis.number_input("WIS", min_value=0, value=default_wis, key=f"wis_{activity['id']}_{i}")
+                            
+                            with c_btn:
+                                st.write("") # Spacer
+                                st.write("")
+                                # Butonları yan yana koymak için alt kolonlar
+                                b_col1, b_col2 = st.columns(2)
+                                with b_col1:
+                                    if st.button("✅ Onayla", key=f"grade_{activity['id']}_{i}", use_container_width=True):
                                         # Değerleri güncelle
                                         activity['xp_reward'] = grade_xp
                                         activity['stat_rewards'] = {
@@ -182,25 +210,13 @@ def admin_dashboard_view():
                                             "VIT": grade_vit,
                                             "WIS": grade_wis
                                         }
-                                        # Onayla (Güncellenmiş değerlerle işlenir)
+                                        # Onayla
                                         char.approve_activity(activity['id'])
                                         GameSystem.save_character(char)
-                                        st.success(f"Puanlandı! {grade_xp} XP verildi.")
+                                        st.success(f"Onaylandı! {grade_xp} XP verildi.")
                                         st.rerun()
-
-                            else:
-                                # Standart Görevler İçin
-                                st.write(f"**Ödül:** {activity['xp_reward']} XP")
-                                
-                                b1, b2 = st.columns(2)
-                                with b1:
-                                    if st.button("✅ Onayla", key=f"app_{activity['id']}_{i}"):
-                                        char.approve_activity(activity['id'])
-                                        GameSystem.save_character(char)
-                                        st.success("Onaylandı!")
-                                        st.rerun()
-                                with b2:
-                                    if st.button("❌ Reddet", key=f"rej_{activity['id']}_{i}"):
+                                with b_col2:
+                                    if st.button("❌ Reddet", key=f"rej_{activity['id']}_{i}", use_container_width=True):
                                         char.reject_activity(activity['id'])
                                         GameSystem.save_character(char)
                                         st.error("Reddedildi.")
@@ -378,65 +394,34 @@ def dashboard_view():
     
     # HTML Header
     st.markdown(f"""
-<div style="
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    background: #fff; 
-    padding: 12px 16px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-    margin-bottom: 20px;
-    flex-wrap: wrap; 
-    gap: 15px;
-    border: 1px solid #f0f0f0;
-">
-    <!-- SOL: Avatar + İsim -->
-    <div style="display: flex; align-items: center; gap: 15px;">
-        <div style="position: relative;">
-            <img src="{img_src}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-        </div>
-        <div style="line-height: 1.4;">
-            <div style="font-weight: 800; font-size: 22px; color: #1f2937; letter-spacing: -0.5px;">{char.name}</div>
-            <div style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                <span style="background:#eef2ff; color:#4f46e5; padding: 2px 8px; border-radius: 6px; font-weight:600;">Lvl {char.level}</span>
-                <span>{char.char_class}</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- SAĞ: Çıkış Butonu -->
-    <div>
-        <a href="?logout=true" target="_self" class="logout-btn" style="
-            padding: 8px 18px; 
-            font-size: 14px; 
-            border: 1px solid #fee2e2; 
-            color: #dc2626 !important;
-            background: linear-gradient(to bottom, #fff, #fef2f2);
-            border-radius: 8px;
-            font-weight: 600;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            white-space: nowrap;
-        ">Çıkış Güçtür 🚪</a>
-    </div>
+<div style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 12px 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; flex-wrap: wrap; gap: 15px; border: 1px solid #f0f0f0;">
+<!-- SOL: Avatar + İsim -->
+<div style="display: flex; align-items: center; gap: 15px;">
+<div style="position: relative;">
+<img src="{img_src}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 </div>
-
+<div style="line-height: 1.4;">
+<div style="font-weight: 800; font-size: 22px; color: #1f2937; letter-spacing: -0.5px;">{char.name}</div>
+<div style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+<span style="background:#eef2ff; color:#4f46e5; padding: 2px 8px; border-radius: 6px; font-weight:600;">Lvl {char.level}</span>
+<span>{char.char_class}</span>
+</div>
+</div>
+</div>
+<!-- SAĞ: Çıkış Butonu -->
+<div>
+<a href="?logout=true" target="_self" class="logout-btn" style="padding: 8px 18px; font-size: 14px; border: 1px solid #fee2e2; color: #dc2626 !important; background: linear-gradient(to bottom, #fff, #fef2f2); border-radius: 8px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); white-space: nowrap;">Çıkış</a>
+</div>
+</div>
 <!-- XP Bar (Kırmızı - İstenilen Stil) -->
 <div style="margin-bottom: 25px; padding: 0 5px;">
-    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-        <span>XP İlerlemesi</span>
-        <span>{char.xp} / {xp_next} XP (%{xp_pct})</span>
-    </div>
-    <div style="width: 100%; height: 14px; background-color: #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
-        <div style="
-            width: {xp_pct}%; 
-            height: 100%; 
-            background: linear-gradient(90deg, #ef4444, #b91c1c); 
-            border-radius: 10px;
-            transition: width 0.6s ease-out;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-        "></div>
-    </div>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+<span>XP İlerlemesi</span>
+<span>{char.xp} / {xp_next} XP (%{xp_pct})</span>
+</div>
+<div style="width: 100%; height: 14px; background-color: #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
+<div style="width: {xp_pct}%; height: 100%; background: linear-gradient(90deg, #ef4444, #b91c1c); border-radius: 10px; transition: width 0.6s ease-out; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);"></div>
+</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -543,17 +528,18 @@ def dashboard_view():
             with st.form("water_form"):
                 # Su için fotoğraf istemiyoruz
                 if st.form_submit_button("İçtim!"):
-                    # Dynamic Description inside log
-                    desc_text = f"Su Tüketimi: {w_selection}"
-                    # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
-                    char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
-                    save_current_user()
-                    # Toast Notification
-                    st.toast(f"Yarasın! {w_selection} içildi. 💧", icon="✅")
-                    st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
-                    # st.balloons() # Balonlar her su içişte fazla olabilir, toast yeterli.
-                    time.sleep(1) # Toast görünsün diye kısa bekleme
-                    st.rerun()
+                    with st.spinner(get_rpg_loading_msg()):
+                        # Dynamic Description inside log
+                        desc_text = f"Su Tüketimi: {w_selection}"
+                        # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
+                        char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
+                        save_current_user()
+                        # Toast Notification
+                        st.toast(f"Yarasın! {w_selection} içildi. 💧", icon="✅")
+                        st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
+                        # st.balloons() # Balonlar her su içişte fazla olabilir, toast yeterli.
+                        time.sleep(1) # Toast görünsün diye kısa bekleme
+                        st.rerun()
 
         # Vertical Layout: Steps Second
         with st.container(border=True):
@@ -569,134 +555,163 @@ def dashboard_view():
             walk_selection = st.selectbox("Hedef Seç", list(walk_tiers.keys()))
             walk_data = walk_tiers[walk_selection]
             st.info(f"🎁 **Ödül:** {walk_data['xp']} XP, +{walk_data['agi']} AGI")
+            st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
             
             with st.form("walk_form"):
-                walk_proof = st.file_uploader("Adım Sayar", type=["jpg", "png"], key="walk_proof")
+                walk_proof = st.file_uploader("Adım Sayar (Opsiyonel - Extra Puan İçin)", type=["jpg", "png"], key="walk_proof")
                 
                 if st.form_submit_button("Tamamladım"):
-                    if walk_proof:
-                        if not os.path.exists("uploads"):
-                            os.makedirs("uploads")
-                        img_path = os.path.join("uploads", walk_proof.name)
-                        with open(img_path, "wb") as f:
-                            f.write(walk_proof.getbuffer())
+                    with st.spinner(get_rpg_loading_msg()):
+                        image_path = None
+                        if walk_proof:
+                            if not os.path.exists("uploads"):
+                                os.makedirs("uploads")
+                            image_path = os.path.join("uploads", walk_proof.name)
+                            with open(image_path, "wb") as f:
+                                f.write(walk_proof.getbuffer())
                         
                         desc_text = f"Yürüyüş: {walk_selection}"
-                        char.log_activity("Cardio", desc_text, walk_data['xp'], {"AGI": walk_data['agi']}, proof_image=img_path)
+                        # Eğer fotoğraf varsa PENDING (Hoca Onayı), yoksa APPROVED (Otomatik)
+                        # Ancak app.py mantığında proof_image varsa otomatik pending oluyor zaten (log_activity içinde).
+                        # Biz sadece proof_image None ise de gönderilmesini sağlıyoruz.
+                        
+                        char.log_activity("Cardio", desc_text, walk_data['xp'], {"AGI": walk_data['agi']}, proof_image=image_path)
                         save_current_user()
-                        st.toast("Adımlar sisteme işlendi! 👣", icon="✅")
-                        st.info("Onaya gönderildi! ⏳")
+                        
+                        if image_path:
+                            st.toast("Kanıtlı yürüyüş gönderildi! Hoca puanlayacak. 👣", icon="⏳")
+                            st.info("Onaya gönderildi! Ekstra puan beklenebilir. ⏳")
+                        else:
+                             st.toast("Yürüyüş kaydedildi! 👣", icon="✅")
+                             st.success(f"Tebrikler! +{walk_data['xp']} XP kazandın.")
+                             
                         time.sleep(1) # Toast için bekleme
                         st.rerun()
-                    else:
-                        st.error("Lütfen fotoğraf yükle!")
 
     with tab5:
         st.subheader("✨ Extra Aktivite")
         st.info("Sınırları zorladın mı? Kendine özel bir başarı mı kazandın? Buradan paylaş, eğitmenin seni ödüllendirsin!")
+        st.caption("💡 **İpucu:** Fotoğraf/Video yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
         
         with st.form("extra_form"):
             extra_desc = st.text_area("Ne yaptın?", "Örn: 30 gün boyunca her sabah 5'te kalktım. / Yeni bir jonglörlük numarası öğrendim.")
-            extra_proof = st.file_uploader("Kanıt Fotoğrafı/Videosu", type=["png", "jpg", "jpeg", "mp4"])
+            extra_proof = st.file_uploader("Kanıt Fotoğrafı/Videosu (Opsiyonel)", type=["png", "jpg", "jpeg", "mp4"])
             
             submitted = st.form_submit_button("Gönder")
             if submitted:
-                if extra_desc and extra_proof:
-                    if not os.path.exists("uploads"):
-                        os.makedirs("uploads")
-                    image_path = os.path.join("uploads", extra_proof.name)
-                    with open(image_path, "wb") as f:
-                        f.write(extra_proof.getbuffer())
+                if extra_desc:
+                    with st.spinner(get_rpg_loading_msg()):
+                        image_path = None
+                        if extra_proof:
+                            if not os.path.exists("uploads"):
+                                os.makedirs("uploads")
+                            image_path = os.path.join("uploads", extra_proof.name)
+                            with open(image_path, "wb") as f:
+                                f.write(extra_proof.getbuffer())
+                            
+                        # XP ve Stat ödülleri 0 olarak gönderilir, hoca belirleyecek
+                        char.log_activity("Extra", extra_desc, 0, {}, proof_image=image_path)
+                        save_current_user()
                         
-                    # XP ve Stat ödülleri 0 olarak gönderilir, hoca belirleyecek
-                    char.log_activity("Extra", extra_desc, 0, {}, proof_image=image_path)
-                    save_current_user()
-                    st.toast("Efsanevi hareket! Ekstra aktivite gönderildi. ✨", icon="🌟")
-                    st.success("Harika! Eğitmenine gönderildi. Puanlamasını bekle. 🌟")
-                    st.balloons()
-                    time.sleep(1.5) # Balonlar için biraz daha uzun pay
-                    st.rerun()
+                        if image_path:
+                            st.toast("Efsanevi hareket kanıtla gönderildi! ✨", icon="🌟")
+                            st.success("Harika! Kanıtlı aktivite gönderildi. Eğitmen ekstra puan verebilir! 🌟")
+                        else:
+                            st.toast("Extra aktivite beyanı alındı! ✨", icon="📝")
+                            st.success("Aktivite gönderildi! Eğitmen değerlendirecek.")
+
+                        st.balloons()
+                        time.sleep(1.5) # Balonlar için biraz daha uzun pay
+                        st.rerun()
                 else:
-                    st.error("Lütfen açıklama yaz ve kanıt yükle.")
+                    st.error("Lütfen en azından bir açıklama yaz.")
 
     with tab2:
         st.subheader("Antrenman Kaydı")
         st.info("Yaptığın antrenmanı gir ve güçlen!")
+        st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
         
         with st.form("workout_form"):
             w_type = st.selectbox("Tip", ["Ağırlık (STR)", "Kardiyo (AGI)", "Yoga/Esneme (WIS)", "HIIT (AGI)"])
             duration = st.number_input("Süre (Dakika)", min_value=10, value=45)
             desc = st.text_input("Açıklama", "Örn: Bacak günü, 5km koşu...")
-            proof_file = st.file_uploader("Kanıt Fotoğrafı Yükle", type=["png", "jpg", "jpeg"])
+            proof_file = st.file_uploader("Kanıt Fotoğrafı Yükle (Opsiyonel)", type=["png", "jpg", "jpeg"])
             
             submitted = st.form_submit_button("Kaydet")
             if submitted:
-                base_xp = duration * 2 # Basit formül
-                stat_reward = {}
-                
-                if "STR" in w_type:
-                    stat_reward["STR"] = 20
-                    stat_reward["WIS"] = 5
-                    act_type = "Strength"
-                elif "AGI" in w_type:
-                    stat_reward["AGI"] = 20
-                    stat_reward["WIS"] = 5
-                    act_type = "Cardio"
-                elif "WIS" in w_type:
-                    stat_reward["WIS"] = 20
-                    stat_reward["VIT"] = 5
-                    act_type = "Mobility"
-                        
-                    # Save Image
-                    image_path = None
-                    if proof_file:
-                        if not os.path.exists("uploads"):
-                            os.makedirs("uploads")
-                        image_path = os.path.join("uploads", proof_file.name)
-                        with open(image_path, "wb") as f:
-                            f.write(proof_file.getbuffer())
-
-                    char.log_activity(act_type, desc, base_xp, stat_reward, proof_image=image_path)
-                    save_current_user()
+                with st.spinner(get_rpg_loading_msg()):
+                    base_xp = duration * 2 # Basit formül
+                    stat_reward = {}
                     
-                    if proof_file:
-                        st.toast("Antrenman onaya gönderildi! 💪", icon="⏳")
-                        st.info("Aktivite onaya gönderildi! ⏳")
-                    else:
-                        st.toast(f"Antrenman kaydedildi! +{base_xp} XP 🔥", icon="✅")
-                        st.success(f"Aktivite kaydedildi! +{base_xp} XP") # Kanıtsızsa direkt onaylı (şimdilik)
-                    time.sleep(1)
-                    st.rerun()
+                    if "STR" in w_type:
+                        stat_reward["STR"] = 20
+                        stat_reward["WIS"] = 5
+                        act_type = "Strength"
+                    elif "AGI" in w_type:
+                        stat_reward["AGI"] = 20
+                        stat_reward["WIS"] = 5
+                        act_type = "Cardio"
+                    elif "WIS" in w_type:
+                        stat_reward["WIS"] = 20
+                        stat_reward["VIT"] = 5
+                        act_type = "Mobility"
+                            
+                        # Save Image
+                        image_path = None
+                        if proof_file:
+                            if not os.path.exists("uploads"):
+                                os.makedirs("uploads")
+                            image_path = os.path.join("uploads", proof_file.name)
+                            with open(image_path, "wb") as f:
+                                f.write(proof_file.getbuffer())
+
+                        char.log_activity(act_type, desc, base_xp, stat_reward, proof_image=image_path)
+                        save_current_user()
+                        
+                        if proof_file:
+                            st.toast("Antrenman onaya gönderildi! Hocan puanlayacak. 💪", icon="⏳")
+                            st.info("Aktivite onaya gönderildi! Ekstra puan şansı. ⏳")
+                        else:
+                            st.toast(f"Antrenman kaydedildi! +{base_xp} XP 🔥", icon="✅")
+                            st.success(f"Aktivite kaydedildi! +{base_xp} XP") # Kanıtsızsa direkt onaylı (şimdilik)
+                        time.sleep(1)
+                        st.rerun()
 
     with tab3:
         st.subheader("🍎 Sağlıklı Beslenme")
         st.info("Sağlıklı bir öğün tüket, **+150 XP** ve **+5 VIT** kazan!")
+        st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
         
         with st.form("nutrition_form"):
             meal_type = st.selectbox("Öğün", ["Kahvaltı", "Öğle Yemeği", "Akşam Yemeği", "Ara Öğün"])
             meal_desc = st.text_input("Menü", "Örn: Izgara Tavuk ve Salata")
-            meal_proof = st.file_uploader("Öğün Fotoğrafı", type=["png", "jpg", "jpeg"])
+            meal_proof = st.file_uploader("Öğün Fotoğrafı (Opsiyonel)", type=["png", "jpg", "jpeg"])
             
             meal_submit = st.form_submit_button("Afiyet Olsun")
             
             if meal_submit:
-                if meal_proof:
-                    if not os.path.exists("uploads"):
-                        os.makedirs("uploads")
-                    image_path = os.path.join("uploads", meal_proof.name)
-                    with open(image_path, "wb") as f:
-                        f.write(meal_proof.getbuffer())
+                with st.spinner(get_rpg_loading_msg()):
+                    image_path = None
+                    if meal_proof:
+                        if not os.path.exists("uploads"):
+                            os.makedirs("uploads")
+                        image_path = os.path.join("uploads", meal_proof.name)
+                        with open(image_path, "wb") as f:
+                            f.write(meal_proof.getbuffer())
 
-                    # Ödül: 150 XP, +5 VIT
+                    # Ödül: 150 XP, +5 VIT (Base)
                     char.log_activity("Nutrition", f"{meal_type}: {meal_desc}", 150, {"VIT": 5}, proof_image=image_path)
                     save_current_user()
-                    st.toast("Afiyet olsun! Öğün kaydedildi. 🥗", icon="🍽️")
-                    st.info("Öğün onaya gönderildi! +5 VIT, +150 XP (Onaylanınca)")
-                    # st.balloons() # Sadece çok özel durumlarda
+                    
+                    if image_path:
+                        st.toast("Afiyet olsun! Fotoğraflı öğün onaya gitti. 🥗", icon="⏳")
+                        st.info("Fotoğraf yüklendi. Hoca ekstra puan verebilir! ⏳")
+                    else:
+                        st.toast("Afiyet olsun! Öğün kaydedildi. 🥗", icon="🍽️")
+                        st.success("Öğün işlendi! +5 VIT, +150 XP")
+
                     time.sleep(1)
                     st.rerun()
-                else:
-                    st.error("Lütfen öğünün fotoğrafını yükle!")
 
     with tab4:
         st.subheader("👹 Boss Savaşı: Titanların Yükselişi")
@@ -743,33 +758,40 @@ def dashboard_view():
         - 🌟 **{boss_data['xp']} XP**
         - 💪 **+{boss_data['stats']['STR']} STR**
         - ❤️ **+{boss_data['stats']['VIT']} VIT**
+        
+        💡 **İpucu:** Video/Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.
         """)
         
         with st.form("boss_form"):
             boss_desc = st.text_input("Zafer Notu", f"{boss_data['target_kg']}kg başardım!")
-            boss_proof = st.file_uploader("Kanıt (Video/Fotoğraf)", type=["png", "jpg", "jpeg", "mp4"])
+            boss_proof = st.file_uploader("Kanıt (Video/Fotoğraf) - Opsiyonel", type=["png", "jpg", "jpeg", "mp4"])
             boss_submit = st.form_submit_button("⚔️ Saldırıya Başla")
             
             if boss_submit:
-                if boss_proof:
-                    if not os.path.exists("uploads"):
-                        os.makedirs("uploads")
-                    image_path = os.path.join("uploads", boss_proof.name)
-                    with open(image_path, "wb") as f:
-                        f.write(boss_proof.getbuffer())
+                with st.spinner(get_rpg_loading_msg()):
+                    image_path = None
+                    if boss_proof:
+                        if not os.path.exists("uploads"):
+                            os.makedirs("uploads")
+                        image_path = os.path.join("uploads", boss_proof.name)
+                        with open(image_path, "wb") as f:
+                            f.write(boss_proof.getbuffer())
 
                     # Activity Log
                     activity_text = f"Boss Savaşı: {selected_boss} - {boss_desc}"
                     char.log_activity("BossFight", activity_text, boss_data['xp'], boss_data['stats'], proof_image=image_path)
                     save_current_user()
                     
-                    st.toast("Kaderin mühürlendi! Boss Savaşı kaydı alındı. 👹", icon="⚔️")
-                    st.success(f"Saldırı başarılı! Ödül onaya gönderildi. ({boss_data['xp']} XP)")
+                    if image_path:
+                        st.toast("Kaderin mühürlendi! Kanıtlı zafer yollandı. 👹", icon="⚔️")
+                        st.success(f"Saldırı başarılı! Kanıt gönderildi. ({boss_data['xp']} XP)")
+                    else:
+                        st.toast("Zafer beyanı alındı! 👹", icon="⚔️")
+                        st.success(f"Saldırı başarılı! ({boss_data['xp']} XP)")
+
                     st.balloons()
                     time.sleep(1.5)
                     st.rerun()
-                else:
-                    st.error("Boss savaşı için kanıt yüklemek zorunludur! Hile yok savaşçı!")
 
     # History Log
     with st.expander("📝 Maceran Günlüğü (Son 5 Aktivite)"):
