@@ -24,7 +24,7 @@ def get_rpg_loading_msg():
     return random.choice(messages)
 
 # Page Config
-st.set_page_config(page_title="Fitness RPG", page_icon="⚔️", layout="wide")
+st.set_page_config(page_title="Levent Fitness RPG", page_icon="⚔️", layout="wide")
 
 
 
@@ -89,7 +89,7 @@ def save_current_user():
 # --- Views ---
 
 def admin_dashboard_view():
-    st.title("👨‍🏫 Öğretmen Kontrol Paneli")
+    st.title("👨‍🏫 Eğitmen Kontrol Paneli")
     
     if st.button("Çıkış Yap"):
         st.session_state.current_user = None
@@ -310,7 +310,7 @@ def onboarding_view():
 
     # Admin Login at the very bottom
     st.write("")
-    with st.expander("👨‍🏫 Öğretmen Girişi"):
+    with st.expander("👨‍🏫 Eğitmen Girişi"):
         admin_pass = st.text_input("Yönetici Şifresi", type="password")
         if st.button("Yönetici Giriş"):
             if admin_pass == "admin123":
