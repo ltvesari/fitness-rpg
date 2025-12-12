@@ -285,7 +285,7 @@ def onboarding_view():
             
             submitted = st.form_submit_button("Başla", use_container_width=True)
             if submitted:
-                if name and password and email:
+                if name and password:
                     chars = GameSystem.load_characters()
                     if name in chars:
                         st.warning("Bu isim zaten alındı!")
