@@ -78,7 +78,14 @@ def load_user(name, password):
     return False, "Kullanıcı Bulunamadı"
 
 def create_user(name, char_class, password, email, avatar_id):
-    new_char = Character(name, char_class, password, email=email, avatar_id=avatar_id)
+    # Use explicit keyword arguments to avoid TypeError
+    new_char = Character(
+        name=name, 
+        char_class=char_class, 
+        password=password, 
+        email=email, 
+        avatar_id=avatar_id
+    )
     GameSystem.save_character(new_char)
     st.session_state.current_user = new_char
 
