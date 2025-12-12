@@ -129,7 +129,7 @@ def admin_dashboard_view():
     for char in chars.values():
         data.append({
             "İsim": char.name,
-            "Sınıf": char.char_class,
+            "Email": getattr(char, 'email', '-'),
             "Seviye": char.level,
             "XP": char.xp,
             "STR": char.stats.get("STR", 0),
@@ -141,10 +141,9 @@ def admin_dashboard_view():
     df = pd.DataFrame(data)
 
     # Top Metrics
-    m1, m2, m3 = st.columns(3)
+    m1, m2 = st.columns(2)
     m1.metric("Toplam Öğrenci", len(df))
     m2.metric("Ortalama Seviye", f"{df['Seviye'].mean():.1f}")
-    m3.metric("En Popüler Sınıf", df['Sınıf'].mode()[0] if not df.empty else "-")
 
     # Main Table
     tab_list, tab_approve = st.tabs(["📊 Genel Durum", "📝 Onay Bekleyenler"])
@@ -153,16 +152,12 @@ def admin_dashboard_view():
         st.dataframe(df, use_container_width=True)
 
         # Charts
-        c1, c2 = st.columns(2)
-        with c1:
-            st.subheader("Sınıf Dağılımı")
-            fig_class = px.pie(df, names='Sınıf', title='Sınıf Tercihleri')
-            st.plotly_chart(fig_class, use_container_width=True)
-        
-        with c2:
-            st.subheader("Seviye Dağılımı")
-            fig_lvl = px.bar(df, x='İsim', y='Seviye', color='Sınıf', title='Öğrenci Seviyeleri')
-            st.plotly_chart(fig_lvl, use_container_width=True)
+        st.subheader("Seviye Dağılımı")
+        try:
+             fig_lvl = px.histogram(df, x='Seviye', title='Seviye Dağılımı', nbins=15)
+             st.plotly_chart(fig_lvl, use_container_width=True)
+        except:
+             st.info("Grafik için yeterli veri yok.")
 
     with tab_approve:
         st.subheader("Onay Bekleyen Aktiviteler")
@@ -248,7 +243,7 @@ def admin_dashboard_view():
 def onboarding_view():
     # Compact Header with Icon on top (Zoomed out for mobile view)
     st.markdown("""
-        <div style='zoom: 0.8; text-align: center; margin-top: -20px; margin-bottom: 20px;'>
+        <div style='zoom: 0.6; text-align: center; margin-top: -20px; margin-bottom: 20px;'>
             <div style='font-size: 40px;'>⚔️</div>
             <h3 style='margin:0; padding:0;'>Fitness RPG'ye Hoşgeldiniz</h3>
             <p style='font-size: 14px; color: gray; margin:0;'>Macerana başlamak için giriş yap veya katıl.</p>
@@ -260,7 +255,7 @@ def onboarding_view():
     st.markdown("""
         <style>
             div[data-testid="column"] {
-                zoom: 0.80;
+                zoom: 0.60;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -369,7 +364,7 @@ def dashboard_view():
                 background-color: #f0f2f6;
             }
         </style>
-        <div style='zoom: 0.90;'> <!-- Global Zoom -->
+        <div style='zoom: 0.60;'> <!-- Global Zoom -->
     """, unsafe_allow_html=True)
     
     # --- Flex Header Row ---
