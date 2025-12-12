@@ -1,0 +1,31 @@
+{
+    "Testhero": {
+        "name": "Testhero",
+        "char_class": "Savaşçı",
+        "email": "levent.akin.ozel@gmail.com",
+        "password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+        "avatar_id": "warrior_male",
+        "level": 1,
+        "xp": 5,
+        "stats": {
+            "STR": 15,
+            "AGI": 10,
+            "VIT": 11,
+            "WIS": 10
+        },
+        "history": [
+            {
+                "id": "Testhero_43139a08",
+                "date": "2025-12-12T21:49:45.992019",
+                "type": "Hydration",
+                "description": "Su Tüketimi: 250ml - Başlangıç Yudumu",
+                "xp_reward": 5,
+                "stat_rewards": {
+                    "VIT": 1
+                },
+                "proof_image": null,
+                "status": "approved"
+            }
+        ]
+    }
+}
