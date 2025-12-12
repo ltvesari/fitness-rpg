@@ -77,8 +77,8 @@ def load_user(name, password):
         return False, "Hatalı Şifre"
     return False, "Kullanıcı Bulunamadı"
 
-def create_user(name, char_class, password, avatar_id):
-    new_char = Character(name, char_class, password, avatar_id)
+def create_user(name, char_class, password, email, avatar_id):
+    new_char = Character(name, char_class, password, email=email, avatar_id=avatar_id)
     GameSystem.save_character(new_char)
     st.session_state.current_user = new_char
 
@@ -281,39 +281,32 @@ def onboarding_view():
         st.markdown("##### 🛡️ Maceraya Katıl")
         with st.form("new_char_form"):
             name = st.text_input("Kahraman Adı", placeholder="Yeni İsim")
+            email = st.text_input("E-Posta Adresi", placeholder="ornek@email.com")
             password = st.text_input("Şifre Belirle", type="password", placeholder="****")
             
-            # Compact Class Selection
-            c1, c2 = st.columns(2)
-            with c1:
-                char_class = st.selectbox("Sınıf", ["Savaşçı", "Korucu", "Keşiş"], label_visibility="collapsed")
-            with c2:
-                gender = st.radio("Cinsiyet", ["Erkek", "Kadın"], horizontal=True, label_visibility="collapsed")
+            # Cinsiyet Seçimi (Sınıf gizlendi)
+            gender = st.radio("Cinsiyet", ["Erkek", "Kadın"], horizontal=True)
             
-            # Class info (Very compact)
-            if char_class == "Savaşçı":
-                st.caption("⚔️ Güç ve Hipertrofi")
-            elif char_class == "Korucu":
-                st.caption("🏹 Dayanıklılık ve Esneklik")
-            elif char_class == "Keşiş":
-                st.caption("🧘 Mobilite ve Zihin")
-                
             submitted = st.form_submit_button("Başla", use_container_width=True)
             if submitted:
-                if name and password:
+                if name and password and email:
                     chars = GameSystem.load_characters()
                     if name in chars:
                         st.warning("Bu isim zaten alındı!")
                     else:
-                        class_map = {"Savaşçı": "warrior", "Korucu": "ranger", "Keşiş": "monk"}
+                        # Varsayılan Sınıf: Savaşçı (Sistemin çalışması için gerekli)
+                        char_class = "Savaşçı" 
+                        
                         gender_map = {"Erkek": "male", "Kadın": "female"}
-                        slug_class = class_map.get(char_class, "warrior")
                         slug_gender = gender_map.get(gender, "male")
-                        final_avatar_id = f"{slug_class}_{slug_gender}"
-                        create_user(name, char_class, password, final_avatar_id)
+                        
+                        # Avatar ID: warrior_male veya warrior_female
+                        final_avatar_id = f"warrior_{slug_gender}"
+                        
+                        create_user(name, char_class, password, email, final_avatar_id)
                         st.rerun()
                 else:
-                    st.error("Eksik bilgi.")
+                    st.error("Lütfen tüm alanları doldurun.")
 
     # Admin Login at the very bottom
     st.write("")
@@ -405,29 +398,15 @@ def dashboard_view():
 <div style="width: 100%; height: 14px; background-color: #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
 <div style="width: {xp_pct}%; height: 100%; background: linear-gradient(90deg, #ef4444, #b91c1c); border-radius: 10px; transition: width 0.6s ease-out; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);"></div>
 </div>
+<!-- Stats Row (Small Text) -->
+<div style="display: flex; gap: 15px; font-size: 11px; color: #6b7280; font-weight: 600; margin-top: 8px; justify-content: flex-end;">
+    <span>💪 STR: {char.stats.get('STR', 0)}</span>
+    <span>💨 AGI: {char.stats.get('AGI', 0)}</span>
+    <span>❤️ VIT: {char.stats.get('VIT', 0)}</span>
+    <span>🧙‍♂️ WIS: {char.stats.get('WIS', 0)}</span>
+</div>
 </div>
 """, unsafe_allow_html=True)
-
-    # Radar Chart (Expander içine gizlendi - Temiz görünüm)
-    with st.expander("📊 Karakter İstatistikleri (Detay)", expanded=False):
-        df_stats = pd.DataFrame(dict(
-            r=list(char.stats.values()),
-            theta=list(char.stats.keys())
-        ))
-        fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True)
-        fig.update_traces(fill='toself', line_color='#ef4444')
-        fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 30], showline=False, gridcolor="rgba(0,0,0,0.1)"),
-                bgcolor="rgba(0,0,0,0)"
-            ),
-            showlegend=False,
-            margin=dict(l=40, r=40, t=20, b=20),
-            height=320,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-        )
-        st.plotly_chart(fig, use_container_width=True)
 
     # Col 2: Info (Level/XP)
     # Col 3: Chart
