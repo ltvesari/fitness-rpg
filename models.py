@@ -1,0 +1,212 @@
+import json
+import os
+import hashlib
+from datetime import datetime
+import uuid
+import streamlit as st
+from supabase import create_client, Client
+
+# Sabitler
+XP_PER_LEVEL_MULTIPLIER = 1000
+
+# Supabase Setup
+# Try to get secrets from Streamlit secrets, environment, or local file
+def get_supabase_client():
+    url = None
+    key = None
+    
+    # 1. Try Streamlit Secrets (Best for Cloud)
+    try:
+        url = st.secrets["supabase"]["url"]
+        key = st.secrets["supabase"]["key"]
+    except Exception:
+        pass
+    
+    # 2. Try Environment Variables
+    if not url:
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_KEY")
+
+    # 3. Try loading local .streamlit/secrets.toml (For local scripts outside Streamlit)
+    if not url:
+        try:
+             # Python 3.11+
+            import tomllib
+            with open(".streamlit/secrets.toml", "rb") as f:
+                secrets = tomllib.load(f)
+                url = secrets["supabase"]["url"]
+                key = secrets["supabase"]["key"]
+        except Exception:
+            pass
+
+    if not url or not key:
+        raise ValueError("Supabase credentials not found! Please check .streamlit/secrets.toml or Streamlit Cloud Secrets.")
+        
+    return create_client(url, key)
+
+# Initialize Client
+try:
+    supabase: Client = get_supabase_client()
+except Exception as e:
+    # Fail gracefully if secrets aren't set yet (e.g. during initial setup)
+    print(f"Warning: {e}")
+    supabase = None
+
+class Character:
+    def __init__(self, name, char_class, password, email="", avatar_id="warrior_male", level=1, xp=0, stats=None, history=None):
+        self.name = name
+        self.char_class = char_class
+        self.email = email
+        self.password = self._hash_password(password) if len(password) < 64 else password
+        self.avatar_id = avatar_id
+        self.level = level
+        self.xp = xp
+        self.stats = stats if stats else self._get_initial_stats()
+        self.history = history if history else []
+
+    def _get_initial_stats(self):
+        return {"STR": 10, "AGI": 10, "VIT": 10, "WIS": 10}
+
+    def _hash_password(self, password):
+        return hashlib.sha256(password.encode()).hexdigest()
+
+    def check_password(self, password):
+        return self.password == self._hash_password(password)
+
+    def add_xp(self, amount):
+        """XP ekler ve seviye atlamayı kontrol eder."""
+        self.xp += amount
+        self.check_level_up()
+
+    def check_level_up(self):
+        """Seviye atlama kontrolü."""
+        xp_needed = self.level * XP_PER_LEVEL_MULTIPLIER
+        while self.xp >= xp_needed:
+            self.xp -= xp_needed
+            self.level += 1
+            self.level_up_rewards()
+            xp_needed = self.level * XP_PER_LEVEL_MULTIPLIER
+
+    def level_up_rewards(self):
+        """Seviye atlayınca gelen stat artışları."""
+        for stat in self.stats:
+            self.stats[stat] += 1
+
+    def log_activity(self, activity_type, description, xp_reward, stat_rewards=None, proof_image=None):
+        """Aktivite kaydeder."""
+        activity_id = f"{self.name}_{str(uuid.uuid4())[:8]}"
+
+        entry = {
+            "id": activity_id,
+            "date": datetime.now().isoformat(),
+            "type": activity_type,
+            "description": description,
+            "xp_reward": xp_reward,
+            "stat_rewards": stat_rewards,
+            "proof_image": proof_image,
+            "status": "pending" if proof_image else "approved" 
+        }
+        
+        if entry["status"] == "approved":
+            self._apply_rewards(activity_type, xp_reward, stat_rewards)
+        
+        self.history.append(entry)
+
+    def _apply_rewards(self, activity_type, xp_reward, stat_rewards):
+        # Sınıf Bonusları Kontrolü
+        bonus_xp = 0
+        if self.char_class == "Savaşçı" and activity_type == "Strength":
+            bonus_xp = int(xp_reward * 0.10)
+        
+        total_xp = xp_reward + bonus_xp
+        self.add_xp(total_xp)
+
+        if stat_rewards:
+            for stat, amount in stat_rewards.items():
+                if stat in self.stats:
+                    self.stats[stat] += amount
+
+    def approve_activity(self, activity_id):
+        for entry in self.history:
+            if entry.get("id") == activity_id and entry["status"] == "pending":
+                entry["status"] = "approved"
+                self._apply_rewards(entry["type"], entry["xp_reward"], entry["stat_rewards"])
+                return True
+        return False
+
+    def reject_activity(self, activity_id):
+        for entry in self.history:
+            if entry.get("id") == activity_id and entry["status"] == "pending":
+                entry["status"] = "rejected"
+                return True
+        return False
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "char_class": self.char_class,
+            "email": self.email,
+            "password": self.password,
+            "avatar_id": self.avatar_id,
+            "level": self.level,
+            "xp": self.xp,
+            "stats": self.stats,
+            "history": self.history
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            name=data["name"],
+            char_class=data["char_class"],
+            password=data.get("password", ""), 
+            email=data.get("email", ""), 
+            avatar_id=data.get("avatar_id", "warrior_male"), 
+            level=int(data["level"]), 
+            xp=int(data["xp"]), 
+            stats=data["stats"],
+            history=data.get("history", [])
+        )
+    
+    def get_avatar_image(self):
+         return f"avatars/{self.avatar_id}.png"
+
+class GameSystem:
+    @staticmethod
+    def load_characters():
+        if not supabase:
+            return {}
+        try:
+            # Fetch all characters from Supabase
+            response = supabase.table("characters").select("*").execute()
+            
+            # Map 'data' column back to Character objects
+            chars = {}
+            for row in response.data:
+                char_data = row['data']
+                # Ensure name in data matches row name (it should)
+                # char_data['name'] = row['name'] 
+                chars[row['name']] = Character.from_dict(char_data)
+            return chars
+            
+        except Exception as e:
+            print(f"Error loading characters: {e}")
+            return {}
+
+    @staticmethod
+    def save_character(character):
+        if not supabase:
+            return
+        
+        try:
+            # Upsert into Supabase (Insert or Update)
+            data_payload = {
+                "name": character.name,
+                "data": character.to_dict(),
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            supabase.table("characters").upsert(data_payload).execute()
+        except Exception as e:
+            print(f"Error saving character: {e}")
+            raise e
