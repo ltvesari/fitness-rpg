@@ -2,166 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
-import json
-import hashlib
-from datetime import datetime
-import base64
 import time
 import random
 
-# --- MODELS.PY CONTENT START ---
-# Sabitler
-XP_PER_LEVEL_MULTIPLIER = 1000
-DATA_FILE = "characters.json"
-
-class Character:
-    def __init__(self, name, char_class, password, email="", avatar_id="warrior_male", level=1, xp=0, stats=None, history=None):
-        self.name = name
-        self.char_class = char_class
-        self.email = email
-        # Store password as simple hash for this MVP (Not secure for prod, but fits request scope)
-        self.password = self._hash_password(password) if len(password) < 64 else password
-        self.avatar_id = avatar_id
-        self.level = level
-        self.xp = xp
-        self.stats = stats if stats else self._get_initial_stats()
-        self.history = history if history else []
-
-    def _hash_password(self, password):
-        return hashlib.sha256(password.encode()).hexdigest()
-
-    def check_password(self, password):
-        return self.password == self._hash_password(password)
-
-    
-    def add_xp(self, amount):
-        """XP ekler ve seviye atlamayı kontrol eder."""
-        # Sınıf bonusları
-        # Not: Bu mantık aktivite tipine göre dışarıdan çağrılırken handle edilmeli
-        # veya buraya aktivite tipi parametresi eklenmeli. 
-        # Şimdilik düz XP ekliyoruz.
-        self.xp += amount
-        self.check_level_up()
-
-    def check_level_up(self):
-        """Seviye atlama kontrolü."""
-        xp_needed = self.level * XP_PER_LEVEL_MULTIPLIER
-        while self.xp >= xp_needed:
-            self.xp -= xp_needed
-            self.level += 1
-            self.level_up_rewards()
-            xp_needed = self.level * XP_PER_LEVEL_MULTIPLIER
-
-    def level_up_rewards(self):
-        """Seviye atlayınca gelen stat artışları."""
-        # Basitçe tüm statlara +1 ekleyelim
-        for stat in self.stats:
-            self.stats[stat] += 1
-
-    def log_activity(self, activity_type, description, xp_reward, stat_rewards=None, proof_image=None):
-        """Aktivite kaydeder."""
-        
-        # ID oluştur (UUID tabanlı - Unique)
-        import uuid
-        activity_id = f"{self.name}_{str(uuid.uuid4())[:8]}"
-
-        entry = {
-            "id": activity_id,
-            "date": datetime.now().isoformat(),
-            "type": activity_type,
-            "description": description,
-            "xp_reward": xp_reward,
-            "stat_rewards": stat_rewards,
-            "proof_image": proof_image,
-            "status": "pending" if proof_image else "approved" # Fotoğraf varsa onay bekle
-        }
-        
-        # Eğer kanıt yoksa veya basit bir işlemse (örn su içme) direkt onaylı sayılabilir
-        # Ama isteğe göre her şey onaya düşebilir. Şimdilik sadece proof_image varsa pending.
-        
-        if entry["status"] == "approved":
-            self._apply_rewards(activity_type, xp_reward, stat_rewards)
-        
-        self.history.append(entry)
-
-    def _apply_rewards(self, activity_type, xp_reward, stat_rewards):
-        # Sınıf Bonusları Kontrolü
-        bonus_xp = 0
-        if self.char_class == "Savaşçı" and activity_type == "Strength":
-            bonus_xp = int(xp_reward * 0.10)
-        
-        total_xp = xp_reward + bonus_xp
-        self.add_xp(total_xp)
-
-        if stat_rewards:
-            for stat, amount in stat_rewards.items():
-                if stat in self.stats:
-                    self.stats[stat] += amount
-
-    def approve_activity(self, activity_id):
-        for entry in self.history:
-            if entry.get("id") == activity_id and entry["status"] == "pending":
-                entry["status"] = "approved"
-                self._apply_rewards(entry["type"], entry["xp_reward"], entry["stat_rewards"])
-                return True
-        return False
-
-    def reject_activity(self, activity_id):
-        for entry in self.history:
-            if entry.get("id") == activity_id and entry["status"] == "pending":
-                entry["status"] = "rejected"
-                return True
-        return False
-
-    def to_dict(self):
-        return {
-            "name": self.name,
-            "char_class": self.char_class,
-            "email": self.email,
-            "password": self.password,
-            "avatar_id": self.avatar_id,
-            "level": self.level,
-            "xp": self.xp,
-            "stats": self.stats,
-            "history": self.history
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(
-            name=data["name"],
-            char_class=data["char_class"],
-            password=data.get("password", ""), # Fallback for old data if any
-            email=data.get("email", ""), # Load email
-            avatar_id=data.get("avatar_id", "warrior_male"), # Default for existing users
-            level=int(data["level"]), # Ensure int
-            xp=int(data["xp"]), # Ensure int
-            stats=data["stats"],
-            history=data.get("history", [])
-        )
-
-class GameSystem:
-    @staticmethod
-    def load_characters():
-        if not os.path.exists(DATA_FILE):
-            return {}
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return {name: Character.from_dict(char_data) for name, char_data in data.items()}
-        except (json.JSONDecodeError, FileNotFoundError):
-            return {}
-
-    @staticmethod
-    def save_character(character):
-        characters = GameSystem.load_characters()
-        characters[character.name] = character
-        
-        data = {name: char.to_dict() for name, char in characters.items()}
-        
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-# --- MODELS.PY CONTENT END ---
+from models import Character, GameSystem
 
 def get_rpg_loading_msg():
     messages = [
@@ -180,8 +24,6 @@ def get_rpg_loading_msg():
 
 # Page Config
 st.set_page_config(page_title="Levent Fitness RPG", page_icon="⚔️", layout="wide")
-
-
 
 # Custom CSS for "Premium" look & Mobile Optimization
 st.markdown("""
@@ -218,8 +60,6 @@ st.markdown("""
 # Session State Initialization
 if 'current_user' not in st.session_state:
     st.session_state.current_user = None
-
-
 
 # --- Helper Functions ---
 def load_user(name, password):
@@ -406,7 +246,6 @@ def onboarding_view():
     """, unsafe_allow_html=True)
 
     # Wrap the rest of the content (columns) in a zoomed div equivalent
-    # Streamlit columns cannot be easily wrapped in HTML, so we inject CSS to zoom form containers specifically for this view
     st.markdown("""
         <style>
             div[data-testid="column"] {
@@ -480,7 +319,6 @@ def onboarding_view():
 def dashboard_view():
     char = st.session_state.current_user
     
-    # Global Dashboard CSS for compact spacing
     # Global Dashboard CSS for compact mobile spacing
     st.markdown("""
         <style>
@@ -565,43 +403,6 @@ def dashboard_view():
 </div>
 """, unsafe_allow_html=True)
 
-    # Col 2: Info (Level/XP)
-    # Col 3: Chart
-    # HEADER REMOVED
-    if False: # Old header block start
-        if False: pass # with c_left:
-        # Avatar & Identity Inline
-        avatar_path = char.get_avatar_image()
-        
-        # Helper to get base64 string
-        import base64
-        def get_img_as_base64(file_path):
-            with open(file_path, "rb") as f:
-                data = f.read()
-            return base64.b64encode(data).decode()
-
-        if os.path.exists(avatar_path):
-            # Local file -> Convert to Base64
-            img_b64 = get_img_as_base64(avatar_path)
-            img_src = f"data:image/png;base64,{img_b64}"
-        else:
-            # Fallback URL
-            img_src = f"https://api.dicebear.com/7.x/adventurer/svg?seed={char.name}"
-        
-        # HTML for Layout: Avatar Left, Text Right, Close together
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="{img_src}" style="width: 60px; height: 60px; border-radius: 10px; object-fit: cover; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-            <div>
-                <div style="font-weight: bold; font-size: 16px; line-height: 1.2;">{char.name}</div>
-                <div style="font-size: 11px; color: #aaa; margin-bottom: 4px;">Lvl {char.level} {char.char_class}</div>
-                <div>
-                    <a href="?logout=true" target="_self" class="logout-btn">Çıkış</a>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
     # Hidden logical logout check
     query_params = st.query_params
     if "logout" in query_params:
@@ -609,15 +410,10 @@ def dashboard_view():
         st.query_params.clear()
         st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True) # Close zoom div (but logical flow continues)
+    st.markdown("</div>", unsafe_allow_html=True) # Close zoom div
     
-    # --- Task Board (Full Width Below) ---
-    # We continue inside the zoom scope effectively by layout proximity, 
-    # but strictly speaking the div closed above. 
-    # Let's wrap the TABS in a zoomed container too or just rely on CSS.
-    # Actually, let's keep the tabs normal width but compact content.
+    # --- Task Board ---
     
-    # Main Content is just the tabs now, no columns split needed for Stats vs Tasks
     st.markdown("<div style='zoom: 0.9;'>", unsafe_allow_html=True)
     # Tabs...
         
@@ -645,19 +441,14 @@ def dashboard_view():
             st.info(f"🎁 **Ödül:** {w_data['xp']} XP, +{w_data['vit']} VIT")
             
             with st.form("water_form"):
-                # Su için fotoğraf istemiyoruz
                 if st.form_submit_button("İçtim!"):
                     with st.spinner(get_rpg_loading_msg()):
-                        # Dynamic Description inside log
                         desc_text = f"Su Tüketimi: {w_selection}"
-                        # Kanıt olmadığı için proof_image=None gider, otomatik onaylanır.
                         char.log_activity("Hydration", desc_text, w_data['xp'], {"VIT": w_data['vit']})
                         save_current_user()
-                        # Toast Notification
                         st.toast(f"Yarasın! {w_selection} içildi. 💧", icon="✅")
                         st.success(f"Yarasın! +{w_data['xp']} XP, +{w_data['vit']} VIT")
-                        # st.balloons() # Balonlar her su içişte fazla olabilir, toast yeterli.
-                        time.sleep(1) # Toast görünsün diye kısa bekleme
+                        time.sleep(1)
                         st.rerun()
 
         # Vertical Layout: Steps Second
@@ -690,9 +481,6 @@ def dashboard_view():
                                 f.write(walk_proof.getbuffer())
                         
                         desc_text = f"Yürüyüş: {walk_selection}"
-                        # Eğer fotoğraf varsa PENDING (Hoca Onayı), yoksa APPROVED (Otomatik)
-                        # Ancak app.py mantığında proof_image varsa otomatik pending oluyor zaten (log_activity içinde).
-                        # Biz sadece proof_image None ise de gönderilmesini sağlıyoruz.
                         
                         char.log_activity("Cardio", desc_text, walk_data['xp'], {"AGI": walk_data['agi']}, proof_image=image_path)
                         save_current_user()
@@ -704,7 +492,7 @@ def dashboard_view():
                              st.toast("Yürüyüş kaydedildi! 👣", icon="✅")
                              st.success(f"Tebrikler! +{walk_data['xp']} XP kazandın.")
                              
-                        time.sleep(1) # Toast için bekleme
+                        time.sleep(1)
                         st.rerun()
 
     with tab5:
@@ -728,7 +516,6 @@ def dashboard_view():
                             with open(image_path, "wb") as f:
                                 f.write(extra_proof.getbuffer())
                             
-                        # XP ve Stat ödülleri 0 olarak gönderilir, hoca belirleyecek
                         char.log_activity("Extra", extra_desc, 0, {}, proof_image=image_path)
                         save_current_user()
                         
@@ -740,7 +527,7 @@ def dashboard_view():
                             st.success("Aktivite gönderildi! Eğitmen değerlendirecek.")
 
                         st.balloons()
-                        time.sleep(1.5) # Balonlar için biraz daha uzun pay
+                        time.sleep(1.5)
                         st.rerun()
                 else:
                     st.error("Lütfen en azından bir açıklama yaz.")
@@ -759,7 +546,7 @@ def dashboard_view():
             submitted = st.form_submit_button("Kaydet")
             if submitted:
                 with st.spinner(get_rpg_loading_msg()):
-                    base_xp = duration * 2 # Basit formül
+                    base_xp = duration * 2
                     stat_reward = {}
                     
                     if "STR" in w_type:
@@ -792,7 +579,7 @@ def dashboard_view():
                             st.info("Aktivite onaya gönderildi! Ekstra puan şansı. ⏳")
                         else:
                             st.toast(f"Antrenman kaydedildi! +{base_xp} XP 🔥", icon="✅")
-                            st.success(f"Aktivite kaydedildi! +{base_xp} XP") # Kanıtsızsa direkt onaylı (şimdilik)
+                            st.success(f"Aktivite kaydedildi! +{base_xp} XP")
                         time.sleep(1)
                         st.rerun()
 
@@ -839,12 +626,10 @@ def dashboard_view():
         # Kilo Girişi
         user_weight = st.number_input("Vücut Ağırlığı (kg)", min_value=40, value=70, step=1)
         
-        # Hedef Hesaplama
         t1_target = int(user_weight * 0.5)
         t2_target = int(user_weight * 1.0)
         t3_target = int(user_weight * 1.5)
         
-        # Boss Seçenekleri
         boss_options = {
             "Seviye 1: Demir Çırak (0.5x)": {
                 "desc": f"Hedef: {t1_target}kg ile Bench/Squat/Deadlift/LatPull",
@@ -922,7 +707,7 @@ def dashboard_view():
                 elif h.get("status") == "rejected":
                     status_icon = "❌"
                 
-                xp_text = f"+{h.get('xp_reward', h.get('xp_gained', 0))} XP" # Compatibility with old/new keys
+                xp_text = f"+{h.get('xp_reward', h.get('xp_gained', 0))} XP"
                 st.text(f"{status_icon} {h['date'][:16]} - {h['description']} ({xp_text})")
         else:
             st.caption("Henüz bir kayıt yok.")
