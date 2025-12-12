@@ -8,9 +8,10 @@ XP_PER_LEVEL_MULTIPLIER = 1000
 DATA_FILE = "characters.json"
 
 class Character:
-    def __init__(self, name, char_class, password, avatar_id="warrior_male", level=1, xp=0, stats=None, history=None):
+    def __init__(self, name, char_class, password, email="", avatar_id="warrior_male", level=1, xp=0, stats=None, history=None):
         self.name = name
         self.char_class = char_class
+        self.email = email
         # Store password as simple hash for this MVP (Not secure for prod, but fits request scope)
         self.password = self._hash_password(password) if len(password) < 64 else password
         self.avatar_id = avatar_id
@@ -223,6 +224,7 @@ class Character:
         return {
             "name": self.name,
             "char_class": self.char_class,
+            "email": self.email,
             "password": self.password,
             "avatar_id": self.avatar_id,
             "level": self.level,
@@ -237,6 +239,7 @@ class Character:
             name=data["name"],
             char_class=data["char_class"],
             password=data.get("password", ""), # Fallback for old data if any
+            email=data.get("email", ""), # Load email
             avatar_id=data.get("avatar_id", "warrior_male"), # Default for existing users
             level=int(data["level"]), # Ensure int
             xp=int(data["xp"]), # Ensure int
