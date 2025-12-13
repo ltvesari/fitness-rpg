@@ -5,7 +5,7 @@ import os
 import time
 import random
 
-from models import Character, GameSystem
+from models import Character, GameSystem, WORKOUT_MULTIPLIERS
 
 def get_rpg_loading_msg():
     messages = [
@@ -164,10 +164,11 @@ def admin_dashboard_view():
                     with st.expander(f"{char_name} - {activity['type']} ({activity['date'][:16]})"):
                         col_img, col_info = st.columns([1, 2])
                         with col_img:
-                            if activity.get("proof_image"):
-                                st.image(activity["proof_image"], caption="Kanıt")
+                            img_path = activity.get("proof_image")
+                            if img_path and os.path.exists(img_path):
+                                st.image(img_path, caption="Kanıt")
                             else:
-                                st.warning("Görsel Yok")
+                                st.warning("Dosya bulunamadı veya silinmiş.")
                         with col_info:
                             st.write(f"**Açıklama:** {activity['description']}")
                             
@@ -367,10 +368,26 @@ def dashboard_view():
     xp_pct = min(100, int((char.xp / xp_next) * 100))
     
     # HTML Header
+    # Avatar & Identity
+    avatar_path = char.get_avatar_image()
+    
+    # HTML Header with embedded image
+    import base64
+    def get_img_base64(path):
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+        return "" # Fallback logic needed if wanted
+
+    img_b64 = get_img_base64(avatar_path)
+    # If image not found locally, use a generic placeholder or the old dicebear logic if desired.
+    img_src = f"data:image/png;base64,{img_b64}" if img_b64 else "https://api.dicebear.com/7.x/adventurer/svg?seed=" + char.name
+
     st.markdown(f"""
 <div style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 12px 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; flex-wrap: wrap; gap: 15px; border: 1px solid #f0f0f0;">
 <!-- SOL: İsim ve Bilgi -->
 <div style="display: flex; align-items: center; gap: 15px;">
+    {f'<img src="{img_src}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;">' if img_b64 else ''}
 <div style="line-height: 1.4;">
 <div style="font-weight: 800; font-size: 22px; color: #1f2937; letter-spacing: -0.5px;">{char.name}</div>
 <div style="font-size: 13px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 6px;">
@@ -526,7 +543,6 @@ def dashboard_view():
                             st.toast("Extra aktivite beyanı alındı! ✨", icon="📝")
                             st.success("Aktivite gönderildi! Eğitmen değerlendirecek.")
 
-                        st.balloons()
                         time.sleep(1.5)
                         st.rerun()
                 else:
@@ -537,51 +553,49 @@ def dashboard_view():
         st.info("Yaptığın antrenmanı gir ve güçlen!")
         st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
         
+        st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
+        
         with st.form("workout_form"):
-            w_type = st.selectbox("Tip", ["Ağırlık (STR)", "Kardiyo (AGI)", "Yoga/Esneme (WIS)", "HIIT (AGI)"])
-            duration = st.number_input("Süre (Dakika)", min_value=10, value=45)
+            # Dinamik antrenman tipleri
+            w_type = st.selectbox("Tip", list(WORKOUT_MULTIPLIERS.keys()))
+            duration = st.number_input("Süre (Dakika)", min_value=10, value=45, step=5)
             desc = st.text_input("Açıklama", "Örn: Bacak günü, 5km koşu...")
             proof_file = st.file_uploader("Kanıt Fotoğrafı Yükle (Opsiyonel)", type=["png", "jpg", "jpeg"])
+            
+            # Canlı Hesaplama Gösterimi (Form içinde state yenilenmediği için submit sonrası veya dışarıda göstermek lazım ama form içinde static kalır. 
+            # Kullanıcıya bilgi vermek için st.info statik kalabilir veya form dışına alabiliriz. 
+            # Form kısıtlaması nedeniyle şimdilik form içine bilgi notu ekleyelim ama dinamik olmayabilir.)
+            # Streamlit formlarında submit olmadan değer değişince rerun olmaz. O yüzden tahmini değerleri sabit gösteriyoruz.
             
             submitted = st.form_submit_button("Kaydet")
             if submitted:
                 with st.spinner(get_rpg_loading_msg()):
-                    base_xp = duration * 2
-                    stat_reward = {}
+                    # Merkezi hesaplama
+                    xp_reward, stat_reward = Character.calculate_workout_rewards(w_type, duration)
                     
-                    if "STR" in w_type:
-                        stat_reward["STR"] = 20
-                        stat_reward["WIS"] = 5
-                        act_type = "Strength"
-                    elif "AGI" in w_type:
-                        stat_reward["AGI"] = 20
-                        stat_reward["WIS"] = 5
-                        act_type = "Cardio"
-                    elif "WIS" in w_type:
-                        stat_reward["WIS"] = 20
-                        stat_reward["VIT"] = 5
-                        act_type = "Mobility"
-                            
-                        # Save Image
-                        image_path = None
-                        if proof_file:
-                            if not os.path.exists("uploads"):
-                                os.makedirs("uploads")
-                            image_path = os.path.join("uploads", proof_file.name)
-                            with open(image_path, "wb") as f:
-                                f.write(proof_file.getbuffer())
+                    # Save Image
+                    image_path = None
+                    if proof_file:
+                        if not os.path.exists("uploads"):
+                            os.makedirs("uploads")
+                        image_path = os.path.join("uploads", proof_file.name)
+                        with open(image_path, "wb") as f:
+                            f.write(proof_file.getbuffer())
 
-                        char.log_activity(act_type, desc, base_xp, stat_reward, proof_image=image_path)
-                        save_current_user()
+                    # Activity Log
+                    act_type = w_type.split(" ")[0] # "Ağırlık", "Kardiyo" vs.
+                    char.log_activity(act_type, f"{desc} ({duration} dk)", xp_reward, stat_reward, proof_image=image_path)
+                    save_current_user()
+                    
+                    if proof_file:
+                        st.toast("Antrenman onaya gönderildi! Hocan puanlayacak. 💪", icon="⏳")
+                        st.info("Aktivite onaya gönderildi! Ekstra puan şansı. ⏳")
+                    else:
+                        st.toast(f"Antrenman kaydedildi! +{xp_reward} XP 🔥", icon="✅")
+                        st.success(f"Harika iş! +{xp_reward} XP ve statlarını geliştirdin.")
                         
-                        if proof_file:
-                            st.toast("Antrenman onaya gönderildi! Hocan puanlayacak. 💪", icon="⏳")
-                            st.info("Aktivite onaya gönderildi! Ekstra puan şansı. ⏳")
-                        else:
-                            st.toast(f"Antrenman kaydedildi! +{base_xp} XP 🔥", icon="✅")
-                            st.success(f"Aktivite kaydedildi! +{base_xp} XP")
-                        time.sleep(1)
-                        st.rerun()
+                    time.sleep(1.5)
+                    st.rerun()
 
     with tab3:
         st.subheader("🍎 Sağlıklı Beslenme")
@@ -693,7 +707,6 @@ def dashboard_view():
                         st.toast("Zafer beyanı alındı! 👹", icon="⚔️")
                         st.success(f"Saldırı başarılı! ({boss_data['xp']} XP)")
 
-                    st.balloons()
                     time.sleep(1.5)
                     st.rerun()
 
