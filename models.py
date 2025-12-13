@@ -9,6 +9,14 @@ from supabase import create_client, Client
 # Sabitler
 XP_PER_LEVEL_MULTIPLIER = 1000
 
+# Antrenman Katsayıları
+WORKOUT_MULTIPLIERS = {
+    "Ağırlık (STR)": {"xp_mult": 1.2, "primary": "STR", "secondary": "VIT"},
+    "Kardiyo (AGI)": {"xp_mult": 1.0, "primary": "AGI", "secondary": "VIT"},
+    "Yoga/Esneme (WIS)": {"xp_mult": 0.8, "primary": "WIS", "secondary": "AGI"},
+    "HIIT (AGI)": {"xp_mult": 1.1, "primary": "AGI", "secondary": "STR"},
+}
+
 # Supabase Setup
 # Try to get secrets from Streamlit secrets, environment, or local file
 def get_supabase_client():
@@ -104,7 +112,8 @@ class Character:
             "xp_reward": xp_reward,
             "stat_rewards": stat_rewards,
             "proof_image": proof_image,
-            "status": "pending" if proof_image else "approved" 
+            "status": "pending" if proof_image else "approved",
+            "admin_bonus_applied": False,
         }
         
         if entry["status"] == "approved":
@@ -151,8 +160,44 @@ class Character:
             "level": self.level,
             "xp": self.xp,
             "stats": self.stats,
+            "stats": self.stats,
             "history": self.history
         }
+
+    @staticmethod
+    def calculate_workout_rewards(workout_type, duration_minutes):
+        """
+        Süre ve türe göre ödül hesaplar.
+        Base XP: Dakika başı 5 XP
+        Stat: Her 30 dakikada +1 Primary, +0.5 Secondary (Tam sayıya yuvarlanır)
+        """
+        if duration_minutes <= 0:
+            return 0, {}
+
+        # Default config
+        config = WORKOUT_MULTIPLIERS.get(workout_type, {"xp_mult": 1.0, "primary": "VIT", "secondary": "STR"})
+        
+        # XP Calculation
+        base_xp = duration_minutes * 5
+        final_xp = int(base_xp * config["xp_mult"])
+        
+        # Stat Calculation
+        # Her 30 dk bir ana stat
+        primary_gain = int(duration_minutes / 30)
+        # Her 60 dk bir yan stat (veya 30 dk için 0.5 mantığı ama int casting ile 60dk gerekebilir)
+        secondary_gain = int(duration_minutes / 45) # Biraz daha zor
+        
+        # En azından emek varsa 1 puan verelim mi? Hayır, süre teşviki olsun. 
+        # Ama 10 dk antrenman yapana 0 stat vermek acımasız olabilir.
+        # User request: "statlar ve expler süreye göre artmalı"
+        
+        stats = {}
+        if primary_gain > 0:
+            stats[config["primary"]] = primary_gain
+        if secondary_gain > 0:
+            stats[config["secondary"]] = secondary_gain
+            
+        return final_xp, stats
 
     @classmethod
     def from_dict(cls, data):
@@ -169,7 +214,30 @@ class Character:
         )
     
     def get_avatar_image(self):
-         return f"avatars/{self.avatar_id}.png"
+        # Determine base gender from initial avatar_id or defaults
+        # Assume format was like "warrior_male" or we can infer/store gender. 
+        # For now, let's detect from the stored avatar_id if it contains "female"
+        gender = "female" if "female" in self.avatar_id else "male"
+        
+        # Level thresholds
+        thresholds = [20, 15, 10, 5, 1]
+        
+        # Find the highest threshold the user has reached
+        target_level = 1
+        for t in thresholds:
+            if self.level >= t:
+                target_level = t
+                break
+        
+        # Construct filename: e.g. "assets/avatars/male_10.png"
+        path = f"assets/avatars/{gender}_{target_level}.png"
+        
+        # Local check if file exists (optional, keeping fallback simple)
+        if os.path.exists(path):
+             return path
+        
+        # Fallback if image missing
+        return f"assets/avatars/{gender}_1.png"
 
 class GameSystem:
     @staticmethod
