@@ -514,14 +514,14 @@ def dashboard_view():
 
     with tab5:
         st.subheader("✨ Extra Aktivite")
-        st.info("Sınırları zorladın mı? Kendine özel bir başarı mı kazandın? Buradan paylaş, eğitmenin seni ödüllendirsin!")
-        st.caption("💡 **İpucu:** Fotoğraf/Video yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
+        st.info("Oyun dışı bir gelişim mi gösterdin? (Örn: Sigarayı bıraktın, terapiye gittin, farklı bir spor denedin).")
+        st.caption("📝 Buraya yaz, istersen kanıt ekle. **Eğitmenin değerlendirip sana özel Stat ve XP versin.**")
         
         with st.form("extra_form"):
-            extra_desc = st.text_area("Ne yaptın?", "Örn: 30 gün boyunca her sabah 5'te kalktım. / Yeni bir jonglörlük numarası öğrendim.")
+            extra_desc = st.text_area("Ne yaptın?", "Örn: 30 gün boyunca her sabah 5'te kalktım ve...")
             extra_proof = st.file_uploader("Kanıt Fotoğrafı/Videosu (Opsiyonel)", type=["png", "jpg", "jpeg", "mp4"])
             
-            submitted = st.form_submit_button("Gönder")
+            submitted = st.form_submit_button("Eğitmene Gönder")
             if submitted:
                 if extra_desc:
                     with st.spinner(get_rpg_loading_msg()):
@@ -538,10 +538,10 @@ def dashboard_view():
                         
                         if image_path:
                             st.toast("Efsanevi hareket kanıtla gönderildi! ✨", icon="🌟")
-                            st.success("Harika! Kanıtlı aktivite gönderildi. Eğitmen ekstra puan verebilir! 🌟")
+                            st.success("Harika! Kanıtlı aktivite gönderildi. Eğitmen değerlendirip puan verecek! 🌟")
                         else:
                             st.toast("Extra aktivite beyanı alındı! ✨", icon="📝")
-                            st.success("Aktivite gönderildi! Eğitmen değerlendirecek.")
+                            st.success("Aktivite eğitmenin onayına gönderildi! Değerlendirme bekleniyor.")
 
                         time.sleep(1.5)
                         st.rerun()
