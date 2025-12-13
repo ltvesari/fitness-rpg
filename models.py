@@ -112,7 +112,7 @@ class Character:
             "xp_reward": xp_reward,
             "stat_rewards": stat_rewards,
             "proof_image": proof_image,
-            "status": "pending" if proof_image else "approved",
+            "status": "pending" if (proof_image or activity_type == "Extra") else "approved",
             "admin_bonus_applied": False,
         }
         
