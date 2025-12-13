@@ -644,26 +644,26 @@ def dashboard_view():
         t2_target = int(user_weight * 1.0)
         t3_target = int(user_weight * 1.5)
         
-    boss_options = {
-        "Seviye 1: Demir Çırak (0.5x)": {
-            "desc": f"{t1_target}kg ile Bench/Squat/Deadlift/LatPull",
-            "xp": 500, 
-            "stats": {"STR": 5, "VIT": 5},
-            "target_kg": t1_target
-        },
-        "Seviye 2: Çelik Muhafız (1.0x)": {
-            "desc": f"{user_weight}kg ile Bench/Squat/Deadlift/LatPull",
-            "xp": 1500, 
-            "stats": {"STR": 15, "VIT": 10},
-            "target_kg": user_weight
-        },
-        "Seviye 3: Titanyum Titan (1.5x)": {
-            "desc": f"{t3_target}kg ile Bench/Squat/Deadlift/LatPull",
-            "xp": 3000, 
-            "stats": {"STR": 30, "VIT": 20},
-            "target_kg": t3_target
+        boss_options = {
+            "Seviye 1: Demir Çırak (0.5x)": {
+                "desc": f"{t1_target}kg ile Bench/Squat/Deadlift/LatPull",
+                "xp": 500, 
+                "stats": {"STR": 5, "VIT": 5},
+                "target_kg": t1_target
+            },
+            "Seviye 2: Çelik Muhafız (1.0x)": {
+                "desc": f"{user_weight}kg ile Bench/Squat/Deadlift/LatPull",
+                "xp": 1500, 
+                "stats": {"STR": 15, "VIT": 10},
+                "target_kg": user_weight
+            },
+            "Seviye 3: Titanyum Titan (1.5x)": {
+                "desc": f"{t3_target}kg ile Bench/Squat/Deadlift/LatPull",
+                "xp": 3000, 
+                "stats": {"STR": 30, "VIT": 20},
+                "target_kg": t3_target
+            }
         }
-    }
         
         selected_boss = st.radio("Zorluk Seç", list(boss_options.keys()))
         boss_data = boss_options[selected_boss]
