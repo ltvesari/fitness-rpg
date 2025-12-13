@@ -553,8 +553,8 @@ def dashboard_view():
         st.info("Yaptığın antrenmanı gir ve güçlen!")
         st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
         
-        st.caption("💡 **İpucu:** Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.")
         
+
         with st.form("workout_form"):
             # Dinamik antrenman tipleri
             w_type = st.selectbox("Tip", list(WORKOUT_MULTIPLIERS.keys()))
@@ -644,33 +644,37 @@ def dashboard_view():
         t2_target = int(user_weight * 1.0)
         t3_target = int(user_weight * 1.5)
         
-        boss_options = {
-            "Seviye 1: Demir Çırak (0.5x)": {
-                "desc": f"Hedef: {t1_target}kg ile Bench/Squat/Deadlift/LatPull",
-                "xp": 500, 
-                "stats": {"STR": 5, "VIT": 5},
-                "target_kg": t1_target
-            },
-            "Seviye 2: Çelik Muhafız (1.0x)": {
-                "desc": f"Hedef: {user_weight}kg ile Bench/Squat/Deadlift/LatPull",
-                "xp": 1500, 
-                "stats": {"STR": 15, "VIT": 10},
-                "target_kg": user_weight
-            },
-            "Seviye 3: Titanyum Titan (1.5x)": {
-                "desc": f"Hedef: {t3_target}kg ile Bench/Squat/Deadlift/LatPull",
-                "xp": 3000, 
-                "stats": {"STR": 30, "VIT": 20},
-                "target_kg": t3_target
-            }
+    boss_options = {
+        "Seviye 1: Demir Çırak (0.5x)": {
+            "desc": f"{t1_target}kg ile Bench/Squat/Deadlift/LatPull",
+            "xp": 500, 
+            "stats": {"STR": 5, "VIT": 5},
+            "target_kg": t1_target
+        },
+        "Seviye 2: Çelik Muhafız (1.0x)": {
+            "desc": f"{user_weight}kg ile Bench/Squat/Deadlift/LatPull",
+            "xp": 1500, 
+            "stats": {"STR": 15, "VIT": 10},
+            "target_kg": user_weight
+        },
+        "Seviye 3: Titanyum Titan (1.5x)": {
+            "desc": f"{t3_target}kg ile Bench/Squat/Deadlift/LatPull",
+            "xp": 3000, 
+            "stats": {"STR": 30, "VIT": 20},
+            "target_kg": t3_target
         }
+    }
         
         selected_boss = st.radio("Zorluk Seç", list(boss_options.keys()))
         boss_data = boss_options[selected_boss]
         
         st.markdown(f"""
         ### 📜 {selected_boss.split(':')[1]}
-        **Görev:** {boss_data['desc']}
+        
+        <div style="background-color: #fef3c7; border-left: 5px solid #d97706; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+            <p style="color: #92400e; font-weight: bold; margin: 0; font-size: 14px; text-transform: uppercase;">⚔️ Görev</p>
+            <p style="color: #78350f; font-size: 18px; font-weight: 500; margin: 5px 0 0 0;">{boss_data['desc']}</p>
+        </div>
         
         **Ödüller:**
         - 🌟 **{boss_data['xp']} XP**
@@ -678,7 +682,7 @@ def dashboard_view():
         - ❤️ **+{boss_data['stats']['VIT']} VIT**
         
         💡 **İpucu:** Video/Fotoğraf yüklersen eğitmeninden **EKSTRA** XP ve Stat ödülleri kazanabilirsin! Yoksa standart ödülü alırsın.
-        """)
+        """, unsafe_allow_html=True)
         
         with st.form("boss_form"):
             boss_desc = st.text_input("Zafer Notu", f"{boss_data['target_kg']}kg başardım!")
